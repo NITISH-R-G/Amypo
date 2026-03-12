@@ -1,15 +1,17 @@
 import { NavLink } from 'react-router-dom';
-import { Home, LayoutDashboard, Target, GraduationCap, BarChart3, Settings, FileVideo, TerminalSquare, SlidersHorizontal, UserCircle, Bell } from 'lucide-react';
+import { LayoutGrid, BookOpen, GraduationCap, Code, ShieldCheck, Settings, History, LineChart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Sidebar({ isOpen, setIsOpen }) {
   const routes = [
-    { name: 'Dashboard', path: '/', icon: <Home size={20} /> },
-    { name: 'Practice Workspace', path: '/student', icon: <TerminalSquare size={20} /> },
-    { name: 'My Submissions', path: '/submissions', icon: <FileVideo size={20} /> },
-    { name: 'Analytics', path: '/analytics', icon: <BarChart3 size={20} /> },
-    { name: 'Trainer Panel', path: '/trainer', icon: <GraduationCap size={20} /> },
-    { name: 'Admin Operations', path: '/admin', icon: <SlidersHorizontal size={20} /> },
+    { icon: LayoutGrid, label: 'Dashboard', path: '/' },
+    { icon: BookOpen, label: 'Learning Roadmap', path: '/roadmap' },
+    { icon: GraduationCap, label: 'Teacher Portal', path: '/teacher' },
+    { icon: Code, label: 'Editor', path: '/student' },
+    { icon: ShieldCheck, label: 'Trainer Panel', path: '/trainer' },
+    { icon: Settings, label: 'Admin', path: '/admin' },
+    { icon: History, label: 'Submissions', path: '/submissions' },
+    { icon: LineChart, label: 'Analytics', path: '/analytics' },
   ];
 
   return (
@@ -56,10 +58,12 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                       : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 font-medium'
                   } ${!isOpen && 'justify-center'}`
                 }
-                title={!isOpen ? route.name : undefined}
+                title={!isOpen ? route.label : undefined}
               >
-                <div className="flex items-center">{route.icon}</div>
-                {isOpen && <span className="text-sm whitespace-nowrap">{route.name}</span>}
+                <div className="flex items-center min-w-[20px]">
+                  <route.icon size={20} />
+                </div>
+                {isOpen && <span className="text-sm whitespace-nowrap">{route.label}</span>}
               </NavLink>
             ))}
          </div>

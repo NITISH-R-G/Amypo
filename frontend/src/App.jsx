@@ -9,6 +9,9 @@ import AdminDashboard from './pages/AdminDashboard';
 import SubmissionsPage from './pages/SubmissionsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import SettingsPage from './pages/SettingsPage';
+import TeacherDashboard from './pages/TeacherDashboard';
+import QuestionEditor from './pages/QuestionEditor';
+import QuestionRoadmap from './pages/QuestionRoadmap';
 
 function App() {
   return (
@@ -18,8 +21,12 @@ function App() {
            <Route index element={<Dashboard />} />
            <Route path="welcome" element={<LandingPage />} />
            <Route path="student" element={<StudentDashboard />} />
+           <Route path="roadmap" element={<QuestionRoadmap />} />
            <Route path="results" element={<EvaluationResults />} />
            <Route path="results/:id" element={<EvaluationResults />} />
+           <Route path="teacher" element={<TeacherDashboard />} />
+           <Route path="teacher/editor" element={<QuestionEditor />} />
+           <Route path="teacher/editor/:id" element={<QuestionEditor />} />
            <Route path="trainer" element={<TrainerPanel />} />
            <Route path="admin" element={<AdminDashboard />} />
            <Route path="submissions" element={<SubmissionsPage />} />

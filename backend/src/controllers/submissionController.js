@@ -1,6 +1,7 @@
-const { Submission, Question, EvaluationRun, Artifact } = require('../models');
+const { Submission, Question, EvaluationRun, Artifact, User } = require('../models');
 const staticValidationService = require('../services/staticValidationService');
 const { enqueueEvaluation, queueEvents } = require('../services/queueService');
+const { updateStreak } = require('../utils/streakManager');
 
 const submitCode = async (req, res) => {
   try {
@@ -39,6 +40,9 @@ const submitCode = async (req, res) => {
       status: validationResults.isValid ? 'pending' : 'failed',
       static_validation_results: validationResults
     });
+
+    // Update streak (non-blocking)
+    updateStreak(student_id).catch(err => console.error('Streak update failed:', err));
 
     // 3. Queue for worker if valid
     if (validationResults.isValid) {

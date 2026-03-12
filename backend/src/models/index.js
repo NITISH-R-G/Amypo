@@ -9,8 +9,18 @@ const Submission = require('./Submission');
 const EvaluationRun = require('./EvaluationRun');
 const Artifact = require('./Artifact');
 const WhitelistDomain = require('./WhitelistDomain');
+const Course = require('./Course');
+const User = require('./User');
 
 // Define relationships
+
+// Course 1:N Question
+Course.hasMany(Question, { foreignKey: 'course_id', onDelete: 'SET NULL' });
+Question.belongsTo(Course, { foreignKey: 'course_id' });
+
+// User 1:N Submission
+User.hasMany(Submission, { foreignKey: 'student_id', onDelete: 'CASCADE' });
+Submission.belongsTo(User, { foreignKey: 'student_id' });
 
 // Question 1:N QuestionFile
 Question.hasMany(QuestionFile, { foreignKey: 'question_id', onDelete: 'CASCADE' });
@@ -45,5 +55,7 @@ module.exports = {
   Submission,
   EvaluationRun,
   Artifact,
-  WhitelistDomain
+  WhitelistDomain,
+  Course,
+  User
 };

@@ -1,17 +1,78 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, BarChart3, FileVideo, TerminalSquare } from 'lucide-react';
+import { ArrowRight, BarChart3, FileVideo, TerminalSquare, Flame, BookOpen, GraduationCap, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 
 export default function Dashboard() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch('/api/users/1');
+        const data = await res.json();
+        setUser(data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUser();
+  }, []);
+
   return (
-    <div className="w-full flex-1 flex flex-col gap-6 pb-12">
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Jump back into practice, review submissions, or check analytics.
-        </p>
+    <div className="w-full flex-1 flex flex-col gap-8 pb-12">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-black text-gray-900 tracking-tight">Welcome Back</h1>
+          <p className="text-gray-500 mt-1 font-medium italic">
+            "Consistency is the key to mastering the craft."
+          </p>
+        </div>
+        
+        {/* Streak Component */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-orange-50 border border-orange-100 px-6 py-3 rounded-2xl flex items-center gap-4 shadow-sm"
+        >
+          <div className="w-12 h-12 bg-orange-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-orange-200">
+            <Flame size={24} fill="white" />
+          </div>
+          <div>
+            <div className="text-2xl font-black text-orange-600 leading-none">{user?.current_streak || 0} Days</div>
+            <div className="text-xs font-bold text-orange-400 uppercase tracking-wider">Current Streak</div>
+          </div>
+        </motion.div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Roadmap Progress Card */}
+        <Link 
+          to="/roadmap"
+          className="lg:col-span-2 relative overflow-hidden bg-indigo-600 p-8 rounded-[2.5rem] shadow-xl shadow-indigo-100 group transition-all hover:-translate-y-1"
+        >
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            <div>
+              <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center text-white mb-6">
+                <BookOpen size={20} />
+              </div>
+              <h2 className="text-2xl font-black text-white mb-2">Learning Roadmap</h2>
+              <p className="text-indigo-100 font-medium text-sm leading-relaxed max-w-sm">
+                Next up: Core UI Layouts & Flexbox. We've curated a path to take you from basics to professional level.
+              </p>
+            </div>
+            <div className="mt-8 flex items-center gap-2 text-white font-bold text-sm">
+              Resume Journey <ArrowRight size={16} />
+            </div>
+          </div>
+          
+          {/* Abstract background shapes */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl opacity-50" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-400 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl opacity-30" />
+        </Link>
         <Link
           to="/student"
           className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all group"

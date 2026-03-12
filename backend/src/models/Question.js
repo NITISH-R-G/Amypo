@@ -19,6 +19,23 @@ const Question = sequelize.define('Question', {
     type: DataTypes.JSONB,
     allowNull: true,
     defaultValue: [] // Array of CDN URLs or library IDs
+  },
+  course_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  order_index: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  constraints: {
+    type: DataTypes.JSONB,
+    defaultValue: [] 
+  },
+  starter_code: {
+    type: DataTypes.JSONB,
+    allowNull: true
+    /* { html: "...", css: "...", js: "..." } */
   }
 }, {
   tableName: 'questions',

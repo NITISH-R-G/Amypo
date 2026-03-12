@@ -59,6 +59,17 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Assessment Engine API is running' });
 });
 
+app.get('/api/users/:id', async (req, res) => {
+  try {
+    const { User } = require('./src/models');
+    const user = await User.findByPk(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (e) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Database Sync and Server Startup
 const startServer = async () => {
   try {
@@ -70,26 +81,62 @@ const startServer = async () => {
     await sequelize.sync({ alter: true });
     console.log('Database synced.');
 
-    // Seed Demo Question if none exists
-    const { Question, TestSpec } = require('./src/models');
-    // Project Checklist:
-    // - [x] HUD-style Dashboard Implementation
-    // - [x] Glassmorphism & Framer Motion Animations
-    // - [x] AI Fix-It' Button Integration
-    // - [ ] Real-time Console Log Streaming
-    // - [ ] Accessibility (A11y) Audit Engine
+    // Seed Demo Course and User
+    const { Question, TestSpec, Course, User } = require('./src/models');
+    
+    // Ensure User 1 exists for streak demo
+    let user1 = await User.findByPk('1');
+    if (!user1) {
+      user1 = await User.create({
+        id: '1',
+        name: 'Student Test',
+        role: 'student',
+        current_streak: 5,
+        highest_streak: 12,
+        last_activity_date: new Date()
+      });
+      console.log('Seed: Created test user with 5-day streak.');
+    }
+
+    // Ensure Course exists
+    let course1 = await Course.findByPk(1);
+    if (!course1) {
+      course1 = await Course.create({
+        id: 1,
+        title: "Modern Frontend Fundamentals",
+        description: "Master the core pillars of UI development: CSS Layouts, Responsive Design, and DOM Manipulation.",
+        difficulty: "Beginner"
+      });
+      console.log('Seed: Created Fundamentals course Roadmap.');
+    }
+
     const existingQuestion = await Question.findByPk(1);
     if (!existingQuestion) {
       await Question.create({
         id: 1,
         title: "Build a Social Profile Card",
         description: "Create a responsive social media profile card component. It should match the design specs precisely, including hover states and the follow button interaction.",
-        allowed_libraries: []
+        allowed_libraries: [],
+        course_id: 1,
+        order_index: 0,
+        constraints: [
+          { type: 'css', property: 'display', value: ['flex', 'grid'], selector: '.card' }
+        ],
+        starter_code: {
+          html: '<div class="card">\n  <!-- Add your code here -->\n</div>',
+          css: '.card {\n  /* Add styles */\n}',
+          js: '// No starter JS'
+        }
       });
-      console.log('Database seeded with demo question.');
+      console.log('Database seeded with demo question linked to roadmap.');
+    } else if (!existingQuestion.course_id) {
+       await existingQuestion.update({ 
+         course_id: 1,
+         constraints: [{ type: 'css', property: 'display', value: ['flex', 'grid'], selector: '.card' }]
+       });
     }
 
-    // Seed / ensure a TestSpec for Question 1 so Submit & Evaluate actually verifies requirements.
+    // Seed / ensure a TestSpec for Question 1
     const baselineBlock = {
       // "Expected" reference implementation used to generate expected screenshots for visual diff.
       html: `<div class="card">
