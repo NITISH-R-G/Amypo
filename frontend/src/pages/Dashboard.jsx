@@ -33,23 +33,26 @@ export default function Dashboard() {
         </div>
         
         {/* Streak Component */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-orange-50 border border-orange-100 px-6 py-3 rounded-2xl flex items-center gap-4 shadow-sm"
-        >
-          <div className="w-12 h-12 bg-orange-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-orange-200">
-            <Flame size={24} fill="white" />
-          </div>
-          <div>
-            <div className="text-2xl font-black text-orange-600 leading-none">{user?.current_streak || 0} Days</div>
-            <div className="text-xs font-bold text-orange-400 uppercase tracking-wider">Current Streak</div>
-          </div>
-        </motion.div>
+        {loading ? (
+          <div className="bg-gray-100/50 w-48 h-[72px] rounded-2xl animate-pulse" />
+        ) : (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-orange-50 border border-orange-100 px-6 py-3 rounded-2xl flex items-center gap-4 shadow-sm"
+          >
+            <div className="w-12 h-12 bg-orange-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-orange-200">
+              <Flame size={24} fill="white" />
+            </div>
+            <div>
+              <div className="text-2xl font-black text-orange-600 leading-none">{user?.current_streak || 0} Days</div>
+              <div className="text-xs font-bold text-orange-400 uppercase tracking-wider">Current Streak</div>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Roadmap Progress Card */}
         <Link 
           to="/roadmap"
           className="lg:col-span-2 relative overflow-hidden bg-indigo-600 p-8 rounded-[2.5rem] shadow-xl shadow-indigo-100 group transition-all hover:-translate-y-1"
@@ -61,8 +64,19 @@ export default function Dashboard() {
               </div>
               <h2 className="text-2xl font-black text-white mb-2">Learning Roadmap</h2>
               <p className="text-indigo-100 font-medium text-sm leading-relaxed max-w-sm">
-                Next up: Core UI Layouts & Flexbox. We've curated a path to take you from basics to professional level.
+                Track your progress through the professional web development curriculum.
               </p>
+              
+              {/* Next Up Module */}
+              <div className="mt-6 flex items-center gap-4 bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/10 w-fit">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-white shrink-0">
+                   <ChevronRight size={24} />
+                </div>
+                <div>
+                   <div className="text-[10px] font-black uppercase tracking-widest text-indigo-200">Next Module</div>
+                   <div className="text-sm font-bold text-white">Advanced CSS Grid Layouts</div>
+                </div>
+              </div>
             </div>
             <div className="mt-8 flex items-center gap-2 text-white font-bold text-sm">
               Resume Journey <ArrowRight size={16} />

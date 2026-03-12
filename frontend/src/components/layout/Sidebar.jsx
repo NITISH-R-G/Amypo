@@ -16,8 +16,12 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
   return (
     <motion.aside
-      animate={{ width: isOpen ? 260 : 80 }}
-      className="app-sidebar h-screen bg-white border-r border-gray-200 flex flex-col justify-between sticky top-0 left-0 z-40 shadow-sm"
+      initial={false}
+      animate={{ 
+        width: isOpen ? 260 : (window.innerWidth < 768 ? 0 : 80),
+        x: (window.innerWidth < 768 && !isOpen) ? -260 : 0
+      }}
+      className={`app-sidebar h-screen bg-white border-r border-gray-200 flex flex-col justify-between fixed md:sticky top-0 left-0 z-50 shadow-sm overflow-hidden transition-all duration-300`}
     >
       <div>
          <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100">

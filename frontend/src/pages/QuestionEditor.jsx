@@ -40,13 +40,19 @@ export default function QuestionEditor({ id }) {
           <h1 className="text-3xl font-black text-gray-900 tracking-tight">Question Editor</h1>
           <p className="text-gray-500 font-medium">Design professional-grade frontend challenges</p>
         </div>
-        <div className="flex gap-3">
-           <button className="px-5 py-2.5 rounded-xl border-2 border-gray-100 text-gray-600 font-bold hover:bg-gray-50 transition-all flex items-center gap-2">
-             Cancel
-           </button>
-           <button className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100 transition-all flex items-center gap-2">
-             <SaveAll size={18} /> Save Challenge
-           </button>
+        <div className="flex items-center gap-6">
+           <div className="flex items-center gap-2 text-emerald-600 font-bold text-xs bg-emerald-50 px-3 py-1.5 rounded-full">
+             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+             Autosave active
+           </div>
+           <div className="flex gap-3">
+              <button className="px-5 py-2.5 rounded-xl border-2 border-gray-100 text-gray-600 font-bold hover:bg-gray-50 transition-all flex items-center gap-2 text-sm">
+                Cancel
+              </button>
+              <button className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100 transition-all flex items-center gap-2 text-sm">
+                <SaveAll size={18} /> Save Challenge
+              </button>
+           </div>
         </div>
       </div>
 

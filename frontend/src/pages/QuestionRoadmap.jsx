@@ -33,8 +33,17 @@ export default function QuestionRoadmap() {
   }, []);
 
   if (loading) return (
-    <div className="flex items-center justify-center h-96">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+    <div className="max-w-4xl mx-auto py-12 px-6 animate-pulse">
+      <div className="h-8 w-48 bg-gray-200 rounded-full mx-auto mb-4" />
+      <div className="h-10 w-64 bg-gray-200 rounded-xl mx-auto mb-12" />
+      <div className="space-y-12">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="flex gap-8">
+            <div className="w-20 h-20 bg-gray-100 rounded-3xl shrink-0" />
+            <div className="flex-1 h-32 bg-gray-100 rounded-3xl" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 

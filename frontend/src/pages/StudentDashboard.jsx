@@ -7,7 +7,7 @@ import CodeEditor from '../components/workspace/CodeEditor';
 import PreviewFrame from '../components/workspace/PreviewFrame';
 import QuestionPanel from '../components/workspace/QuestionPanel';
 import { cn } from '../utils/utils';
-import { useToast } from '../components/ui/use-toast';
+import { useNotifications } from '../components/ui/NotificationHub';
 
 const EVALUATION_STAGES = [
   { id: 'package', label: 'Packaging submission', duration: 400 },
@@ -22,7 +22,7 @@ const EVALUATION_STAGES = [
 export default function StudentDashboard() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { toast } = useToast();
+  const { addNotification } = useNotifications();
   const [activeTab, setActiveTab] = useState('html');
   const [questions, setQuestions] = useState([]);
   const [selectedQuestionId, setSelectedQuestionId] = useState(null);
@@ -53,7 +53,7 @@ export default function StudentDashboard() {
           setSelectedQuestionId((prev) => (requested ? requested : (prev == null ? qs[0].id : prev)));
         }
       } catch (e) {
-        toast({ title: 'Load Failed', description: e?.message || 'Could not load questions.', variant: 'destructive' });
+        addNotification('error', 'Load Failed', e?.message || 'Could not load questions.');
       } finally {
         if (!cancelled) setQuestionsLoading(false);
       }
@@ -82,7 +82,7 @@ export default function StudentDashboard() {
         setStarterCode(next);
         setCode(next);
       } catch (e) {
-        toast({ title: 'Load Failed', description: e?.message || 'Could not load question.', variant: 'destructive' });
+        addNotification('error', 'Load Failed', e?.message || 'Could not load question.');
       } finally {
         if (!cancelled) setQuestionLoading(false);
       }
@@ -107,7 +107,7 @@ export default function StudentDashboard() {
 
   const handleRunTests = async () => {
     if (!selectedQuestionId) {
-      toast({ title: 'No Question Selected', description: 'Please select a question first.', variant: 'destructive' });
+      addNotification('error', 'No Question Selected', 'Please select a question first.');
       return;
     }
     setIsEvaluating(true);
@@ -130,7 +130,7 @@ export default function StudentDashboard() {
       const data = await res.json();
       
       if (!res.ok || data.status === 'failed') {
-        toast({ title: 'Validation Failed', description: data.error || data.message || 'Syntax error', variant: 'destructive' });
+        addNotification('error', 'Validation Failed', data.error || data.message || 'Syntax error');
         setIsEvaluating(false);
         return;
       }
@@ -150,10 +150,7 @@ export default function StudentDashboard() {
           setEvalStageIndex(EVALUATION_STAGES.length);
           
           setTimeout(() => {
-            toast({
-              title: "Evaluation Completed",
-              description: "Redirecting to your results...",
-            });
+            addNotification('success', 'Evaluation Completed', 'Redirecting to your results...');
             navigate(`/results/${submissionId}`);
           }, 1500);
         }
@@ -165,7 +162,7 @@ export default function StudentDashboard() {
       };
 
     } catch (error) {
-      toast({ title: 'Connection Error', description: 'Failed to connect to the evaluation engine.', variant: 'destructive' });
+      addNotification('error', 'Connection Error', 'Failed to connect to the evaluation engine.');
       setIsEvaluating(false);
     }
   };
@@ -182,10 +179,7 @@ export default function StudentDashboard() {
   const handleAiFix = async () => {
     if (isEvaluating) return;
     
-    toast({
-      title: "AI Analysis Started",
-      description: "Analyzing your code for potential improvements...",
-    });
+    addNotification('info', 'AI Analysis Started', 'Analyzing your code for potential improvements...');
 
     try {
       const res = await fetch('/api/ai/fix', {
@@ -197,13 +191,10 @@ export default function StudentDashboard() {
       
       if (data.success) {
         setCode(data.fixedCode);
-        toast({
-          title: "Code Optimized ✨",
-          description: data.explanation,
-        });
+        addNotification('success', 'Code Optimized ✨', data.explanation);
       }
     } catch (e) {
-      toast({ title: "AI Error", description: "Failed to reach the AI engine.", variant: "destructive" });
+      addNotification('error', 'AI Error', 'Failed to reach the AI engine.');
     }
   };
 
@@ -253,7 +244,7 @@ export default function StudentDashboard() {
            <button
               onClick={() => {
                 setCode(starterCode);
-                toast({ title: "Code Reset", description: "Your code has been reset." });
+                addNotification('info', 'Code Reset', 'Your code has been reset.');
               }}
               className="flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-600 rounded-xl font-bold text-sm transition-all shadow-sm border border-gray-200 active:scale-95"
             >
