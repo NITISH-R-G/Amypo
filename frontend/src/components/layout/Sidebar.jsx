@@ -1,48 +1,37 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutGrid, BookOpen, GraduationCap, Code, ShieldCheck, Settings, History, LineChart } from 'lucide-react';
+import { Home, LayoutDashboard, Target, GraduationCap, BarChart3, Settings, Code, FileVideo, TerminalSquare, SlidersHorizontal, UserCircle, Bell, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Sidebar({ isOpen, setIsOpen }) {
   const routes = [
-    { icon: LayoutGrid, label: 'Dashboard', path: '/' },
-    { icon: BookOpen, label: 'Learning Roadmap', path: '/roadmap' },
-    { icon: GraduationCap, label: 'Teacher Portal', path: '/teacher' },
-    { icon: Code, label: 'Editor', path: '/student' },
-    { icon: ShieldCheck, label: 'Trainer Panel', path: '/trainer' },
-    { icon: Settings, label: 'Admin', path: '/admin' },
-    { icon: History, label: 'Submissions', path: '/submissions' },
-    { icon: LineChart, label: 'Analytics', path: '/analytics' },
+    { name: 'Dashboard', path: '/', icon: <Home size={20} /> },
+    { name: 'Learning Roadmap', path: '/roadmap', icon: <BookOpen size={20} /> },
+    { name: 'Teacher Portal', path: '/teacher', icon: <GraduationCap size={20} /> },
+    { name: 'Practice Workspace', path: '/student', icon: <TerminalSquare size={20} /> },
+    { name: 'My Submissions', path: '/submissions', icon: <FileVideo size={20} /> },
+    { name: 'Analytics', path: '/analytics', icon: <BarChart3 size={20} /> },
+    { name: 'Trainer Panel', path: '/trainer', icon: <Target size={20} /> },
+    { name: 'Admin Operations', path: '/admin', icon: <SlidersHorizontal size={20} /> },
   ];
 
   return (
     <motion.aside
-      initial={false}
-      animate={{ 
-        width: isOpen ? 260 : (window.innerWidth < 768 ? 0 : 80),
-        x: (window.innerWidth < 768 && !isOpen) ? -260 : 0
-      }}
-      className={`app-sidebar h-screen bg-white border-r border-gray-200 flex flex-col justify-between fixed md:sticky top-0 left-0 z-50 shadow-sm overflow-hidden transition-all duration-300`}
+      animate={{ width: isOpen ? 260 : 80 }}
+      className="h-screen bg-white border-r border-gray-200 flex flex-col justify-between sticky top-0 left-0 z-40 shadow-sm"
     >
       <div>
          <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100">
            {isOpen && (
              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-                 <img
-                   src="/amypo-logo.png"
-                   alt="Amypo"
-                   className="adaptive-logo h-8 w-auto max-w-[190px] object-contain select-none"
-                   draggable="false"
-                 />
+                 <div className="bg-indigo-600 p-1.5 rounded-lg text-white">
+                   <Code size={18} strokeWidth={3}/>
+                 </div>
+                 <span className="font-bold text-gray-900 tracking-tight text-lg">Assess<span className="text-indigo-600">Pro</span></span>
              </motion.div>
            )}
            {!isOpen && (
-             <div className="w-full flex justify-center">
-               <img
-                 src="/amypo-logo.png"
-                 alt="Amypo"
-                 className="adaptive-logo h-8 w-8 object-contain select-none"
-                 draggable="false"
-               />
+             <div className="w-full flex justify-center text-indigo-600">
+               <Code size={24} strokeWidth={3}/>
              </div>
            )}
          </div>
@@ -62,12 +51,10 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                       : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 font-medium'
                   } ${!isOpen && 'justify-center'}`
                 }
-                title={!isOpen ? route.label : undefined}
+                title={!isOpen ? route.name : undefined}
               >
-                <div className="flex items-center min-w-[20px]">
-                  <route.icon size={20} />
-                </div>
-                {isOpen && <span className="text-sm whitespace-nowrap">{route.label}</span>}
+                <div className="flex items-center">{route.icon}</div>
+                {isOpen && <span className="text-sm whitespace-nowrap">{route.name}</span>}
               </NavLink>
             ))}
          </div>
