@@ -44,28 +44,75 @@ export default function StudentDashboard() {
     ]
   };
 
-  const handleRunTests = () => {
+  const handleRunTests = async () => {
     setIsEvaluating(true);
     setEvalStageIndex(0);
+
+    try {
+      const res = await fetch('http://localhost:4000/api/submissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question_id: 1, // Using Demo Question ID 1
+          student_id: 1,  // Using Demo Student ID 1
+          html_content: code.html,
+          css_content: code.css,
+          js_content: code.js
+        })
+      });
+
+      const data = await res.json();
+      
+      if (!res.ok || data.status === 'failed') {
+        toast({ title: 'Validation Failed', description: data.error || data.message || 'Syntax error', variant: 'destructive' });
+        setIsEvaluating(false);
+        return;
+      }
+
+      const submissionId = data.submission_id;
+
+      // Listen to real-time events from the BullMQ Worker
+      const eventSource = new EventSource(`http://localhost:4000/api/submissions/${submissionId}/progress`);
+
+      eventSource.onmessage = (e) => {
+        const eventData = JSON.parse(e.data);
+        
+        if (eventData.status === 'completed' || eventData.status === 'failed') {
+          eventSource.close();
+          setEvalStageIndex(EVALUATION_STAGES.length); // Trigger UI completion state
+          
+          setTimeout(() => {
+            toast({
+              title: "Evaluation Completed",
+              description: "Redirecting to your detailed results report...",
+            });
+            navigate(`/results/${submissionId}`);
+          }, 1000);
+        }
+      };
+
+      eventSource.onerror = () => {
+        eventSource.close();
+        // Fallback incase SSE stream drops
+        setTimeout(() => navigate(`/results/${submissionId}`), 5000);
+      };
+
+    } catch (error) {
+      toast({ title: 'Connection Error', description: 'Failed to connect to the evaluation engine.', variant: 'destructive' });
+      setIsEvaluating(false);
+    }
   };
 
   useEffect(() => {
-    if (evalStageIndex >= 0 && evalStageIndex < EVALUATION_STAGES.length) {
+    // Animate the pipeline stages up to the second-to-last stage while waiting for the server
+    if (evalStageIndex >= 0 && evalStageIndex < EVALUATION_STAGES.length - 1) {
       const timer = setTimeout(() => {
         setEvalStageIndex(prev => prev + 1);
       }, EVALUATION_STAGES[evalStageIndex].duration);
       return () => clearTimeout(timer);
-    } else if (evalStageIndex === EVALUATION_STAGES.length) {
-      // Evaluation Complete, Redirect
-      setTimeout(() => {
-        toast({
-          title: "Evaluation Completed",
-          description: "Redirecting to your detailed results report...",
-        });
-        navigate('/results/demo-123');
-      }, 500);
     }
-  }, [evalStageIndex, navigate, toast]);
+    // Auto-redirect is now handled by the SSE listener when the actual backend job finishes
+  }, [evalStageIndex]);
 
   return (
     <div className="h-full flex flex-col gap-4 relative">

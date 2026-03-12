@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Download } from 'lucide-react';
 import ScoreGauge from '../components/results/ScoreGauge';
 import AIFeedbackCard from '../components/results/AIFeedbackCard';
@@ -7,45 +7,110 @@ import FailedTestsTable from '../components/results/FailedTestsTable';
 import DiffViewer from '../components/results/DiffViewer';
 
 export default function EvaluationResults() {
-  // Mock detailed Evaluation Report based on architecture spec
-  const report = {
-    submissionId: 'sub_qk928jf',
-    totalScore: 78.5,
-    bucketScores: {
-      html: 18, // out of 20
-      css: 25.5, // out of 35
-      js: 35, // out of 35
-      visual: 0 // out of 10
-    },
-    failedTests: [
-      { testId: 'css_flexbox_missing', hint: 'The .card container needs display:flex to align children side-by-side.', selector: '.card' },
-      { testId: 'css_button_hover', hint: 'Button background on hover does not match specified color #312e81.', selector: 'button:hover' }
-    ],
-    visualArtifacts: [
-      {
-        viewport: 'desktop',
-        mismatchPercentage: 8.45,
-        expected: '/mocks/expected.svg',
-        actual: '/mocks/actual.svg',
-        diff: '/mocks/diff.svg',
-        boxes: [
-          { x: 395, y: 185, width: 130, height: 20 },
-          { x: 235, y: 210, width: 130, height: 20 },
-          { x: 240, y: 265, width: 320, height: 48 }
-        ]
+  const { id } = useParams();
+  const [report, setReport] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchReport = async () => {
+      try {
+        if (id === 'demo-123') {
+          // Keep mock for the specific demo route
+          setReport({
+            submissionId: 'demo-123',
+            totalScore: 78.5,
+            bucketScores: { html: 18, css: 25.5, js: 35, visual: 0 },
+            failedTests: [
+              { testId: 'css_flexbox_missing', hint: 'The .card container needs display:flex to align children side-by-side.', selector: '.card' },
+              { testId: 'css_button_hover', hint: 'Button background on hover does not match specified color #312e81.', selector: 'button:hover' }
+            ],
+            visualArtifacts: [
+              {
+                viewport: 'desktop',
+                mismatchPercentage: 8.45,
+                expected: '/mocks/expected.svg',
+                actual: '/mocks/actual.svg',
+                diff: '/mocks/diff.svg',
+                boxes: [{ x: 395, y: 185, width: 130, height: 20 }, { x: 235, y: 210, width: 130, height: 20 }, { x: 240, y: 265, width: 320, height: 48 }]
+              }
+            ],
+            aiFeedback: {
+              summary: "Your JavaScript logic is perfect and HTML structure is mostly correct. However, your CSS layout completely missed the flexbox requirement, causing a large visual diff deviation.",
+              suggestions: ["Add 'display: flex' and 'align-items: center' to your main .card class.", "Ensure the button hover transition matches exactly 0.2s duration.", "Your image border radius is slightly off (expected 50%, actual 8px)."],
+              difficulty_estimate: "Easy",
+              high_diff_cause: "Flexbox layout completely missing on parent container."
+            }
+          });
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch(`http://localhost:4000/api/submissions/${id}`);
+        const data = await res.json();
+        
+        if (!res.ok) throw new Error(data.error || 'Failed to fetch submission');
+        if (!data.EvaluationRuns || data.EvaluationRuns.length === 0) throw new Error('Evaluation still in progress or failed');
+
+        const run = data.EvaluationRuns[data.EvaluationRuns.length - 1]; // Latest run
+        
+        // Transform DB response to UI format
+        const transformedReport = {
+          submissionId: data.id,
+          totalScore: run.total_score || 0,
+          bucketScores: {
+            html: run.html_score || 0,
+            css: run.css_score || 0,
+            js: run.js_score || 0,
+            visual: run.visual_score || 0
+          },
+          failedTests: run.failed_tests || [],
+          aiFeedback: run.ai_feedback || { summary: "No AI feedback generated.", suggestions: [] },
+          visualArtifacts: []
+        };
+
+        // Group artifacts by viewport
+        if (run.Artifacts && run.Artifacts.length > 0) {
+           const viewports = [...new Set(run.Artifacts.map(a => a.viewport))];
+           
+           transformedReport.visualArtifacts = viewports.map(vp => {
+              const acts = run.Artifacts.filter(a => a.viewport === vp);
+              return {
+                 viewport: vp,
+                 mismatchPercentage: acts.find(a => a.type === 'diff')?.mismatch_percentage || 0,
+                 expected: acts.find(a => a.type === 'expected')?.url || '/mocks/expected.svg',
+                 actual: acts.find(a => a.type === 'actual')?.url || '/mocks/actual.svg',
+                 diff: acts.find(a => a.type === 'diff')?.url || '/mocks/diff.svg',
+                 boxes: acts.find(a => a.type === 'diff')?.diff_boxes || []
+              };
+           });
+        }
+
+        setReport(transformedReport);
+      } catch (err) {
+        console.error(err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
-    ],
-    aiFeedback: {
-      summary: "Your JavaScript logic is perfect and HTML structure is mostly correct. However, your CSS layout completely missed the flexbox requirement, causing a large visual diff deviation.",
-      suggestions: [
-        "Add 'display: flex' and 'align-items: center' to your main .card class.",
-        "Ensure the button hover transition matches exactly 0.2s duration.",
-        "Your image border radius is slightly off (expected 50%, actual 8px)."
-      ],
-      difficulty_estimate: "Easy",
-      high_diff_cause: "Flexbox layout completely missing on parent container."
-    }
-  };
+    };
+
+    fetchReport();
+  }, [id]);
+
+  if (loading) {
+    return <div className="h-full flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>;
+  }
+
+  if (error || !report) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 text-center">
+        <h2 className="text-2xl font-bold text-gray-900">Evaluation Error</h2>
+        <p className="text-gray-500">{error || "Could not load evaluation report."}</p>
+        <Link to="/student" className="px-6 py-2 bg-indigo-600 text-white rounded-lg">Return to Workspace</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto h-full flex flex-col gap-6 pb-12">
