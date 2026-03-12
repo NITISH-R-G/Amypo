@@ -25,10 +25,14 @@ export default function EvaluationResults() {
       {
         viewport: 'desktop',
         mismatchPercentage: 8.45,
-        expected: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop', // Mock placeholder
-        actual: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=800&auto=format&fit=crop',
-        diff: 'https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?q=80&w=800&auto=format&fit=crop',
-        boxes: [{ x: 20, y: 40, width: 60, height: 10 }] // Mock box
+        expected: '/mocks/expected.svg',
+        actual: '/mocks/actual.svg',
+        diff: '/mocks/diff.svg',
+        boxes: [
+          { x: 395, y: 185, width: 130, height: 20 },
+          { x: 235, y: 210, width: 130, height: 20 },
+          { x: 240, y: 265, width: 320, height: 48 }
+        ]
       }
     ],
     aiFeedback: {
