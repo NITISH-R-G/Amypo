@@ -6,9 +6,13 @@ async function executeDomTests(page, domTestSpec) {
       let passed = false;
       let hint = test.hint || `Failed DOM test for selector: ${test.selector}`;
       try {
-        const elements = document.querySelectorAll(test.selector);
-        if (test.assertion === 'exists') passed = elements.length > 0;
-        else if (test.assertion === 'count') passed = elements.length === test.expected;
+        if (test.assertion === 'alertCalled') {
+          passed = Array.isArray(window.__alerts) && window.__alerts.length > 0;
+        } else {
+          const elements = document.querySelectorAll(test.selector);
+          if (test.assertion === 'exists') passed = elements.length > 0;
+          else if (test.assertion === 'count') passed = elements.length === test.expected;
+        }
       } catch (e) {
         hint = `Invalid selector: ${test.selector}`;
       }

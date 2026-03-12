@@ -1,6 +1,7 @@
 const fs = require('fs');
 const PNG = require('pngjs').PNG;
-const pixelmatch = require('pixelmatch');
+const pixelmatchImport = require('pixelmatch');
+const pixelmatch = pixelmatchImport.default || pixelmatchImport;
 
 /**
  * Generates a heatmap diff between two identically sized images.
@@ -88,7 +89,7 @@ async function generateVisualDiff(expectedPath, actualPath, diffPath) {
     }
   }
 
-  return { numDiffPixels, diffPercentage, hotspots: mergedHotspots };
+  return { numDiffPixels, diffPercentage, hotspots: mergedHotspots, width, height };
 }
 
 module.exports = { generateVisualDiff };

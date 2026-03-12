@@ -23,37 +23,96 @@ export default function StudentDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('html');
-  const [code, setCode] = useState({
-    html: '<div class="card">\n  <h2>Profile</h2>\n  <button>Follow</button>\n</div>',
-    css: '.card {\n  padding: 24px;\n  background: white;\n  border-radius: 12px;\n  box-shadow: 0 4px 6px rgba(0,0,0,0.1);\n}',
-    js: 'document.querySelector("button").addEventListener("click", () => {\n  alert("Followed!");\n});',
-  });
+  const [questions, setQuestions] = useState([]);
+  const [selectedQuestionId, setSelectedQuestionId] = useState(null);
+  const [questionDetails, setQuestionDetails] = useState(null);
+  const [questionsLoading, setQuestionsLoading] = useState(true);
+  const [questionLoading, setQuestionLoading] = useState(true);
+
+  const [starterCode, setStarterCode] = useState({ html: '', css: '', js: '' });
+  const [code, setCode] = useState({ html: '', css: '', js: '' });
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evalStageIndex, setEvalStageIndex] = useState(-1);
 
-  // Mock Question Data
-  const question = {
-    title: "Build a Social Profile Card",
-    difficulty: "Medium",
-    description: "Create a responsive social media profile card component. It should match the design specs precisely, including hover states and the follow button interaction.",
-    requirements: [
-      "Use Flexbox or Grid for layout",
-      "Ensure the card is centered on the screen",
-      "Implement the specific hover states on the button",
-      "Trigger an alert on button click"
-    ]
-  };
+  useEffect(() => {
+    let cancelled = false;
+    async function loadQuestions() {
+      setQuestionsLoading(true);
+      try {
+        const res = await fetch('/api/questions');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Failed to load questions');
+        if (cancelled) return;
+        const qs = Array.isArray(data.questions) ? data.questions : [];
+        setQuestions(qs);
+        if (qs.length > 0) setSelectedQuestionId((prev) => (prev == null ? qs[0].id : prev));
+      } catch (e) {
+        toast({ title: 'Load Failed', description: e?.message || 'Could not load questions.', variant: 'destructive' });
+      } finally {
+        if (!cancelled) setQuestionsLoading(false);
+      }
+    }
+    loadQuestions();
+    return () => { cancelled = true; };
+  }, [toast]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadQuestionDetails() {
+      if (!selectedQuestionId) return;
+      setQuestionLoading(true);
+      try {
+        const res = await fetch(`/api/questions/${selectedQuestionId}`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Failed to load question');
+        if (cancelled) return;
+        setQuestionDetails(data);
+        const files = Array.isArray(data.files) ? data.files : [];
+        const next = {
+          html: files.find((f) => f.type === 'html')?.content ?? '',
+          css: files.find((f) => f.type === 'css')?.content ?? '',
+          js: files.find((f) => f.type === 'js')?.content ?? ''
+        };
+        setStarterCode(next);
+        setCode(next);
+      } catch (e) {
+        toast({ title: 'Load Failed', description: e?.message || 'Could not load question.', variant: 'destructive' });
+      } finally {
+        if (!cancelled) setQuestionLoading(false);
+      }
+    }
+    loadQuestionDetails();
+    return () => { cancelled = true; };
+  }, [selectedQuestionId, toast]);
+
+  const question = (() => {
+    const q = questionDetails?.question || {};
+    const spec = questionDetails?.testSpec || {};
+    const domHints = Array.isArray(spec?.tests?.dom) ? spec.tests.dom.map((t) => t.hint).filter(Boolean) : [];
+    const cssHints = Array.isArray(spec?.tests?.css) ? spec.tests.css.map((t) => t.hint).filter(Boolean) : [];
+    const requirements = [...domHints, ...cssHints].filter(Boolean).slice(0, 6);
+    return {
+      title: q.title || 'Practice Workspace',
+      difficulty: spec?.difficulty || 'Medium',
+      description: q.description || '',
+      requirements: requirements.length > 0 ? requirements : ["Complete the UI requirements", "Match layout and hover states", "Ensure click interaction works"]
+    };
+  })();
 
   const handleRunTests = async () => {
+    if (!selectedQuestionId) {
+      toast({ title: 'No Question Selected', description: 'Please select a question first.', variant: 'destructive' });
+      return;
+    }
     setIsEvaluating(true);
     setEvalStageIndex(0);
 
     try {
-      const res = await fetch('http://localhost:4000/api/submissions', {
+      const res = await fetch('/api/submissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question_id: 1, // Using Demo Question ID 1
+          question_id: selectedQuestionId,
           student_id: 1,  // Using Demo Student ID 1
           html_content: code.html,
           css_content: code.css,
@@ -72,7 +131,7 @@ export default function StudentDashboard() {
       const submissionId = data.submission_id;
 
       // Listen to real-time events from the BullMQ Worker
-      const eventSource = new EventSource(`http://localhost:4000/api/submissions/${submissionId}/progress`);
+      const eventSource = new EventSource(`/api/submissions/${submissionId}/progress`);
 
       eventSource.onmessage = (e) => {
         const eventData = JSON.parse(e.data);
@@ -120,14 +179,34 @@ export default function StudentDashboard() {
         <div>
           <h2 className="text-xl font-bold text-gray-900 tracking-tight">Practice Workspace</h2>
           <p className="text-sm text-gray-500">Evaluation Engine v2.0</p>
+          <div className="mt-3 flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Question</span>
+            <select
+              value={selectedQuestionId ?? ''}
+              onChange={(e) => setSelectedQuestionId(Number(e.target.value))}
+              disabled={questionsLoading}
+              className="px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm text-gray-700 outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 disabled:opacity-60"
+            >
+              {questions.map((q) => (
+                <option key={q.id} value={q.id}>{q.title}</option>
+              ))}
+            </select>
+            {questionLoading && <Loader2 size={16} className="animate-spin text-gray-400" />}
+          </div>
         </div>
         <div className="flex gap-3">
-           <button onClick={() => toast({title: "Code Reset", description: "Your code has been reset to the baseline."})} className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 rounded-lg font-medium text-sm transition-colors shadow-sm">
+           <button
+             onClick={() => {
+               setCode(starterCode);
+               toast({ title: "Code Reset", description: "Your code has been reset to the starter template." });
+             }}
+             className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 rounded-lg font-medium text-sm transition-colors shadow-sm"
+           >
              <RotateCcw size={16} /> Reset Code
            </button>
            <button 
              onClick={handleRunTests}
-             disabled={isEvaluating}
+             disabled={isEvaluating || !selectedQuestionId}
              className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-all shadow-sm shadow-indigo-600/20 disabled:opacity-70 disabled:cursor-not-allowed"
            >
              {isEvaluating ? (

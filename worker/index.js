@@ -3,7 +3,7 @@ const dotenv = require('dotenv');
 const evaluator = require('./src/evaluator');
 // We need access to the DB models
 // Usually we'd extract models into a shared package, but for monorepo this works too:
-const { Submission, EvaluationRun } = require('../backend/src/models');
+const { Submission, EvaluationRun, TestSpec, Baseline, WhitelistDomain, Question } = require('../backend/src/models');
 
 dotenv.config();
 
@@ -27,17 +27,50 @@ const worker = new Worker('evaluation-queue', async job => {
     await submission.update({ status: 'running' });
 
     // 2. Fetch Question and TestSpec
-    // (mock implementation, you must load these via Sequelize)
-    // const testSpec = await TestSpec.findOne({ where: { question_id: submission.question_id }});
-    // const baselines = await Baseline.findAll({ where: { question_id: submission.question_id }});
+    const question = await Question.findByPk(submission.question_id);
+    const testSpecRow = await TestSpec.findOne({ where: { question_id: submission.question_id } });
+    const testSpec = testSpecRow ? testSpecRow.spec_json : null;
+
+    const baselines = await Baseline.findAll({ where: { question_id: submission.question_id } });
+
+    const allowedDomainsRows = await WhitelistDomain.findAll();
+    const allowedDomains = allowedDomainsRows.map(r => r.domain);
     
     // For now, let's just create a dummy result for the pipeline scaffold:
-    const htmlCode = submission.html_content || '';
+    let htmlCode = submission.html_content || '';
     const cssCode = submission.css_content || '';
     const jsCode = submission.js_content || '';
 
-    // 3. Execute puppeteer sandbox
-    const result = await evaluator.evaluateSubmission(submissionId, htmlCode, cssCode, jsCode, null, null, [], job);
+    // Inject allowed libraries (CDNs) into both student HTML and baseline HTML if present.
+    if (question?.allowed_libraries && question.allowed_libraries.length > 0) {
+      const injections = question.allowed_libraries.map(lib => {
+        if (lib.endsWith('.css')) return `<link rel="stylesheet" href="${lib}">`;
+        if (lib.endsWith('.js')) return `<script src="${lib}"></script>`;
+        return '';
+      }).join('\n');
+      htmlCode = `${injections}\n${htmlCode}`;
+
+      if (testSpec?.baseline?.html) {
+        testSpec.baseline.html = `${injections}\n${testSpec.baseline.html}`;
+      }
+    }
+
+    // Create the run first to get a stable runId for artifact storage (/artifacts/{runId}/...)
+    const run = await EvaluationRun.create({
+      submission_id: submissionId,
+      html_score: 0,
+      css_score: 0,
+      js_score: 0,
+      visual_score: 0,
+      console_errors: [],
+      execution_timings: {},
+      ai_feedback: { summary: 'Evaluation in progress...', suggestions: [] },
+      failed_tests: [],
+      visual_artifacts: []
+    });
+
+    // 3. Execute puppeteer sandbox (writes artifacts to /artifacts/{run.id}/)
+    const result = await evaluator.evaluateSubmission(run.id, submissionId, htmlCode, cssCode, jsCode, testSpec, baselines, allowedDomains, job);
 
     // 4. Generate AI Feedback
     const { generateFeedback } = require('./src/aiFeedback');
@@ -48,9 +81,8 @@ const worker = new Worker('evaluation-queue', async job => {
       result.visualArtifacts || []
     );
 
-    // 5. Save results to DB
-    await EvaluationRun.create({
-      submission_id: submissionId,
+    // 5. Update run in DB
+    await run.update({
       html_score: result.scores.html,
       css_score: result.scores.css,
       js_score: result.scores.js,
@@ -79,7 +111,7 @@ const worker = new Worker('evaluation-queue', async job => {
   }
 }, { 
   connection,
-  concurrency: process.env.WORKER_CONCURRENCY || 2 // limits headless chromium instances
+  concurrency: Number(process.env.WORKER_CONCURRENCY) || 2 // limits headless chromium instances
 });
 
 worker.on('failed', (job, err) => {

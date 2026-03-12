@@ -1,23 +1,8 @@
 const { HTMLHint } = require('htmlhint');
 const stylelint = require('stylelint');
-const { ESLint } = require('eslint');
+const espree = require('espree');
 
 class StaticValidationService {
-  constructor() {
-    this.eslint = new ESLint({
-      useEslintrc: false,
-      overrideConfig: {
-        env: { browser: true, es2021: true },
-        parserOptions: { ecmaVersion: 'latest', sourceType: 'script' },
-        rules: {
-          'no-undef': 'error',
-          'no-unused-vars': 'warn',
-          'no-const-assign': 'error'
-        }
-      }
-    });
-  }
-
   async validateSetup(htmlCode, cssCode, jsCode) {
     const results = {
       html: [],
@@ -82,23 +67,19 @@ class StaticValidationService {
     // 3. Validate JS
     if (jsCode) {
       try {
-        const jsReport = await this.eslint.lintText(jsCode);
-        const jsResult = jsReport[0];
-        
-        if (jsResult && jsResult.messages.length > 0) {
-          results.js = jsResult.messages.map(m => ({
-            line: m.line,
-            col: m.column,
-            message: m.message,
-            type: m.severity === 2 ? 'error' : 'warning'
-          }));
-          // Parsing/syntax errors are fatal (fatal rule property)
-          if (jsResult.messages.some(m => m.fatal)) {
-            results.isValid = false;
-          }
-        }
+        // ESLint v9+ defaults to flat config and will error if no config file exists.
+        // For "syntax validation", a parser check is enough and avoids env/config issues.
+        espree.parse(jsCode, {
+          ecmaVersion: 'latest',
+          sourceType: 'script'
+        });
       } catch (err) {
-        results.js.push({ message: err.message, type: 'error' });
+        results.js.push({
+          line: err.lineNumber,
+          col: err.column,
+          message: err.message,
+          type: 'error'
+        });
         results.isValid = false;
       }
     }

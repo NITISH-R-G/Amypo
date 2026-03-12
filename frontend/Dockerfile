@@ -1,16 +1,15 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy root package files
+# Copy root and workspace package files for install
 COPY package.json package-lock.json ./
-# Copy workspace package files
 COPY frontend/package.json ./frontend/
 
-# Install dependencies
-RUN npm install -w frontend
+# Install all workspace dependencies from root
+RUN npm install
 
-# Copy source
+# Copy frontend source
 COPY frontend/ ./frontend/
 
 WORKDIR /app/frontend

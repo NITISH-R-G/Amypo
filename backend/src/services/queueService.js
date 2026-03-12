@@ -13,7 +13,9 @@ const queueEvents = new QueueEvents('evaluation-queue', { connection });
 
 const enqueueEvaluation = async (submissionId) => {
   await evaluationQueue.add('evaluate', { submissionId }, {
-    jobId: submissionId.toString(),
+    // BullMQ rejects purely-numeric custom job ids; prefix with a stable string.
+    // Note: BullMQ also disallows ":" in custom ids.
+    jobId: `submission-${submissionId}`,
     attempts: 3,
     backoff: {
       type: 'exponential',

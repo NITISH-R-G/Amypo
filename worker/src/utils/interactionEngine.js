@@ -13,6 +13,12 @@ async function executeInteractions(page, interactionSpec) {
         }
         await page.click(step.selector);
       } 
+      else if (step.action === 'hover') {
+        if (step.waitForVisible) {
+          await page.waitForSelector(step.selector, { visible: true, timeout: 2000 });
+        }
+        await page.hover(step.selector);
+      }
       else if (step.action === 'type') {
         const valueToType = step.value || '';
         await page.type(step.selector, valueToType, { delay: 10 }); // Typing delay simulates human

@@ -26,14 +26,18 @@ export default function AdminDashboard() {
       eventSource = new EventSource(`http://localhost:4000/api/submissions/${activeReplayId}/progress`);
       
       eventSource.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        if (data.type === 'progress') {
-          setReplayEvents(prev => [...prev, { time: new Date().toLocaleTimeString(), type: 'info', text: `Progress: ${data.data.stage}` }]);
-        } else if (data.type === 'completed') {
-          setReplayEvents(prev => [...prev, { time: new Date().toLocaleTimeString(), type: 'success', text: `Completed! Score: ${data.data}` }]);
+        const msg = JSON.parse(e.data);
+        // Backend progress stream currently emits either:
+        // - { progress: { stage: "..." } }
+        // - { status: "completed" }
+        // - { status: "failed", error: "..." }
+        if (msg?.progress?.stage) {
+          setReplayEvents(prev => [...prev, { time: new Date().toLocaleTimeString(), type: 'info', text: `Stage: ${msg.progress.stage}` }]);
+        } else if (msg?.status === 'completed') {
+          setReplayEvents(prev => [...prev, { time: new Date().toLocaleTimeString(), type: 'success', text: `Completed.` }]);
           eventSource.close();
-        } else if (data.type === 'failed') {
-          setReplayEvents(prev => [...prev, { time: new Date().toLocaleTimeString(), type: 'error', text: `FAILED: ${data.data}` }]);
+        } else if (msg?.status === 'failed') {
+          setReplayEvents(prev => [...prev, { time: new Date().toLocaleTimeString(), type: 'error', text: `FAILED: ${msg.error || 'Unknown error'}` }]);
           eventSource.close();
         }
       };

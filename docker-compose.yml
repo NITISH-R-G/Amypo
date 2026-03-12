@@ -1,4 +1,4 @@
-version: '3.8'
+# Docker Compose for Assessment Engine
 
 services:
   postgres:
@@ -26,8 +26,8 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./backend/Dockerfile
     ports:
       - "4000:4000"
     environment:
@@ -47,8 +47,8 @@ services:
 
   worker:
     build:
-      context: ./worker
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./worker/Dockerfile
     environment:
       - DB_HOST=postgres
       - DB_USER=postgres
@@ -72,8 +72,8 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./frontend/Dockerfile
     ports:
       - "5173:5173"
     environment:

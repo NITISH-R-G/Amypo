@@ -3,12 +3,12 @@ const sequelize = require('../config/database');
 
 const TestSpec = sequelize.define('TestSpec', {
   id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
     primaryKey: true,
   },
   question_id: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: false,
     unique: true
   },

@@ -1,6 +1,6 @@
-FROM node:18
+FROM node:20
 
-# Install dependencies for Puppeteer
+# Install dependencies for Puppeteer / headless Chromium
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     fonts-liberation \
@@ -38,20 +38,21 @@ RUN apt-get update && apt-get install -y \
     libxtst6 \
     lsb-release \
     wget \
-    xdg-utils
+    xdg-utils \
+    --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy root package files
+# Copy root and workspace package files for install
 COPY package.json package-lock.json ./
-# Copy workspace package files
 COPY worker/package.json ./worker/
 
-# Install dependencies
-RUN npm install -w worker
+# Install all workspace dependencies from root
+RUN npm install
 
-# Copy source code
+# Copy worker and backend source (worker needs backend models)
 COPY worker/ ./worker/
+COPY backend/ ./backend/
 
 WORKDIR /app/worker
 

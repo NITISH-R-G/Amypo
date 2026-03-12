@@ -3,12 +3,12 @@ const sequelize = require('../config/database');
 
 const EvaluationRun = sequelize.define('EvaluationRun', {
   id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
     primaryKey: true,
   },
   submission_id: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: false,
     unique: true // 1:1 with Submission execution
   },

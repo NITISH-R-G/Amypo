@@ -77,8 +77,32 @@ const getSubmissionStatus = async (req, res) => {
   }
 };
 
+const listSubmissions = async (req, res) => {
+  try {
+    const { student_id, question_id, status, limit, offset } = req.query;
+
+    const where = {};
+    if (student_id) where.student_id = String(student_id);
+    if (question_id) where.question_id = Number(question_id);
+    if (status) where.status = String(status);
+
+    const rows = await Submission.findAll({
+      where,
+      order: [['created_at', 'DESC']],
+      limit: Math.min(Number(limit) || 50, 200),
+      offset: Number(offset) || 0,
+      include: [{ model: EvaluationRun }]
+    });
+
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 const getSubmissionProgress = async (req, res) => {
   const { id } = req.params;
+  const acceptedJobIds = new Set([String(id), `submission-${id}`]);
 
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -87,20 +111,20 @@ const getSubmissionProgress = async (req, res) => {
   });
 
   const onProgress = ({ jobId, data }) => {
-    if (jobId === id) {
+    if (acceptedJobIds.has(String(jobId))) {
       res.write(`data: ${JSON.stringify({ progress: data })}\n\n`);
     }
   };
 
   const onCompleted = ({ jobId, returnvalue }) => {
-    if (jobId === id) {
+    if (acceptedJobIds.has(String(jobId))) {
       res.write(`data: ${JSON.stringify({ status: 'completed' })}\n\n`);
       cleanup();
     }
   };
 
   const onFailed = ({ jobId, failedReason }) => {
-    if (jobId === id) {
+    if (acceptedJobIds.has(String(jobId))) {
       res.write(`data: ${JSON.stringify({ status: 'failed', error: failedReason })}\n\n`);
       cleanup();
     }
@@ -120,8 +144,106 @@ const getSubmissionProgress = async (req, res) => {
   req.on('close', cleanup);
 };
 
+const getSubmissionResult = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const submission = await Submission.findByPk(id, {
+      include: [
+        {
+          model: EvaluationRun,
+          include: [Artifact]
+        }
+      ]
+    });
+
+    if (!submission) return res.status(404).json({ error: 'Submission not found' });
+
+    // If worker hasn't written a run yet, report status and let the UI keep polling.
+    if (!submission.EvaluationRun) {
+      return res.json({
+        status: submission.status,
+        submission_id: submission.id
+      });
+    }
+
+    const run = submission.EvaluationRun;
+
+    // Prefer run.visual_artifacts (worker output). Fall back to Artifacts table if present.
+    let visualTests = [];
+    if (Array.isArray(run.visual_artifacts) && run.visual_artifacts.length > 0) {
+      visualTests = run.visual_artifacts.map(v => ({
+        viewport: v.viewport,
+        status: v.status || (v.diffPercent != null ? 'passed' : 'failed'),
+        diffPercent: Number(v.diffPercent ?? 0),
+        visualScore: Number(v.visualScore ?? 0),
+        expected: v.expected || null,
+        actual: v.actual || null,
+        diff: v.diff || null,
+        boxes: v.hotspots || []
+      }));
+    } else if (Array.isArray(run.Artifacts) && run.Artifacts.length > 0) {
+      // Artifacts table format: expected/actual/diff types per viewport.
+      const viewports = [...new Set(run.Artifacts.map(a => a.viewport))];
+      visualTests = viewports.map(vp => {
+        const acts = run.Artifacts.filter(a => a.viewport === vp);
+        return {
+          viewport: vp,
+          status: 'passed',
+          diffPercent: Number(acts.find(a => a.type === 'diff')?.mismatch_percentage ?? 0),
+          visualScore: 0,
+          expected: acts.find(a => a.type === 'expected')?.url || null,
+          actual: acts.find(a => a.type === 'actual')?.url || null,
+          diff: acts.find(a => a.type === 'diff')?.url || null,
+          boxes: acts.find(a => a.type === 'diff')?.diff_boxes || []
+        };
+      });
+    }
+
+    const desktop = visualTests.find(v => v.viewport === 'desktop') || visualTests[0] || null;
+    const mismatchPercent = Number(desktop?.diffPercent ?? 0);
+
+    return res.json({
+      status: submission.status,
+      submission_id: submission.id,
+      run_id: run.id,
+      total_score: submission.total_score ?? null,
+      scores: {
+        html: run.html_score ?? 0,
+        css: run.css_score ?? 0,
+        js: run.js_score ?? 0,
+        visual: run.visual_score ?? 0
+      },
+      mismatchPercent,
+      failedTests: run.failed_tests || [],
+      aiFeedback: run.ai_feedback || { summary: 'No AI feedback generated.', suggestions: [] },
+      visualArtifacts: desktop
+        ? {
+            expected: desktop.expected || null,
+            actual: desktop.actual || null,
+            diff: desktop.diff || null,
+            boxes: desktop.boxes || []
+          }
+        : null,
+      visualTests: visualTests.map(v => ({
+        viewport: v.viewport,
+        status: v.status,
+        diffPercent: v.diffPercent,
+        visualScore: v.visualScore,
+        expected: v.expected,
+        actual: v.actual,
+        diff: v.diff,
+        boxes: v.boxes
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   submitCode,
+  listSubmissions,
   getSubmissionStatus,
-  getSubmissionProgress
+  getSubmissionProgress,
+  getSubmissionResult
 };
