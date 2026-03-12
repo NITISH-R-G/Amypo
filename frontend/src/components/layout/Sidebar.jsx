@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, LayoutDashboard, Target, GraduationCap, BarChart3, Settings, Code, FileVideo, TerminalSquare, SlidersHorizontal, UserCircle, Bell } from 'lucide-react';
+import { Home, LayoutDashboard, Target, GraduationCap, BarChart3, Settings, FileVideo, TerminalSquare, SlidersHorizontal, UserCircle, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Sidebar({ isOpen, setIsOpen }) {
@@ -15,21 +15,28 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   return (
     <motion.aside
       animate={{ width: isOpen ? 260 : 80 }}
-      className="h-screen bg-white border-r border-gray-200 flex flex-col justify-between sticky top-0 left-0 z-40 shadow-sm"
+      className="app-sidebar h-screen bg-white border-r border-gray-200 flex flex-col justify-between sticky top-0 left-0 z-40 shadow-sm"
     >
       <div>
          <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100">
            {isOpen && (
              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-                 <div className="bg-indigo-600 p-1.5 rounded-lg text-white">
-                   <Code size={18} strokeWidth={3}/>
-                 </div>
-                 <span className="font-bold text-gray-900 tracking-tight text-lg">Assess<span className="text-indigo-600">Pro</span></span>
+                 <img
+                   src="/amypo-logo.png"
+                   alt="Amypo"
+                   className="adaptive-logo h-8 w-auto max-w-[190px] object-contain select-none"
+                   draggable="false"
+                 />
              </motion.div>
            )}
            {!isOpen && (
-             <div className="w-full flex justify-center text-indigo-600">
-               <Code size={24} strokeWidth={3}/>
+             <div className="w-full flex justify-center">
+               <img
+                 src="/amypo-logo.png"
+                 alt="Amypo"
+                 className="adaptive-logo h-8 w-8 object-contain select-none"
+                 draggable="false"
+               />
              </div>
            )}
          </div>

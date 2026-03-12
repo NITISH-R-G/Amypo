@@ -1,27 +1,27 @@
 /**
  * Applies the grading rubrics to test results.
  */
-function calculatePartialScores(domResults, cssResults, diffPercentage, rubric) {
+/**
+ * Applies the grading rubrics to test results.
+ */
+function calculatePartialScores(domResults, cssResults, a11yResults, rubric) {
   const scores = {
     html: 0,
     css: 0,
-    js: 0, // In this automated context, DOM changes verify logic
-    visual: 0
+    js: 0,
+    visual: 0,
+    a11y: 0
   };
 
-  const weights = rubric || { html: 20, css: 35, js: 35, visual: 10 };
+  const weights = rubric || { html: 20, css: 30, js: 30, visual: 10, a11y: 10 };
 
   // Calculate HTML/JS DOM assertions
   if (domResults && domResults.length > 0) {
     const passed = domResults.filter(t => t.passed).length;
-    // Assuming half DOM checks map to HTML rubric and half to JS interactions rubric, 
-    // or aggregate them based on specification.
-    // For simplicity, overall DOM verification counts toward JS/HTML combo based on spec.
     const fraction = passed / domResults.length;
     scores.html = Math.round(fraction * weights.html * 10) / 10;
     scores.js = Math.round(fraction * weights.js * 10) / 10; 
   } else {
-    // If no tests defined but runs successfully, grant full
     scores.html = weights.html;
     scores.js = weights.js;
   }
@@ -35,12 +35,14 @@ function calculatePartialScores(domResults, cssResults, diffPercentage, rubric) 
     scores.css = weights.css;
   }
 
-  // Calculate Visual Diff bucket mapping
-  if (typeof diffPercentage === 'number') {
-    if (diffPercentage <= 1) scores.visual = weights.visual; // full marks
-    else if (diffPercentage <= 3) scores.visual = weights.visual * 0.8;
-    else if (diffPercentage <= 6) scores.visual = weights.visual * 0.5;
-    else scores.visual = 0;
+  // Calculate Accessibility (A11y) score
+  if (a11yResults && a11yResults.violations) {
+    const violationsCount = a11yResults.violations.length;
+    // Every violation deducts 5 points from the A11y bucket (down to 0)
+    const rawA11y = Math.max(0, weights.a11y - (violationsCount * 5));
+    scores.a11y = Math.round(rawA11y * 10) / 10;
+  } else {
+    scores.a11y = weights.a11y;
   }
 
   return scores;

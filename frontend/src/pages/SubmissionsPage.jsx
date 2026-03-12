@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { RefreshCw, ExternalLink } from 'lucide-react';
 import { cn } from '../utils/utils';
 
@@ -14,6 +14,7 @@ function formatDate(iso) {
 }
 
 export default function SubmissionsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -54,19 +55,43 @@ export default function SubmissionsPage() {
     return { total, byStatus };
   }, [items]);
 
+  const query = (searchParams.get('query') || '').trim();
+  const filteredItems = useMemo(() => {
+    if (!query) return items;
+    const needle = query.toLowerCase();
+    return items.filter((s) => {
+      const idMatch = String(s?.id || '').includes(needle);
+      const qTitle = s?.Question?.title || '';
+      const qMatch = qTitle.toLowerCase().includes(needle);
+      return idMatch || qMatch;
+    });
+  }, [items, query]);
+
   return (
     <div className="max-w-7xl mx-auto h-full flex flex-col gap-6 pb-12">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">My Submissions</h1>
-          <p className="text-sm text-gray-500 mt-1">Recent evaluations for your account.</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Recent evaluations for your account{query ? ` (filtered: "${query}")` : ''}.
+          </p>
         </div>
-        <button
-          onClick={() => setRefreshTick(t => t + 1)}
-          className="px-4 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold flex items-center gap-2"
-        >
-          <RefreshCw size={16} /> Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          {query && (
+            <button
+              onClick={() => setSearchParams({})}
+              className="px-4 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold"
+            >
+              Clear Filter
+            </button>
+          )}
+          <button
+            onClick={() => setRefreshTick(t => t + 1)}
+            className="px-4 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold flex items-center gap-2"
+          >
+            <RefreshCw size={16} /> Refresh
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -107,7 +132,7 @@ export default function SubmissionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((s) => (
+                {filteredItems.map((s) => (
                   <tr key={s.id} className="border-t border-gray-100 hover:bg-gray-50/60">
                     <td className="px-6 py-3 font-mono text-xs text-gray-700">{s.id}</td>
                     <td className="px-6 py-3">
@@ -136,7 +161,7 @@ export default function SubmissionsPage() {
                     </td>
                   </tr>
                 ))}
-                {(!loading && items.length === 0) && (
+                {(!loading && filteredItems.length === 0) && (
                   <tr>
                     <td className="px-6 py-8 text-center text-gray-500" colSpan={5}>
                       No submissions yet. Go to <Link to="/student" className="text-indigo-700 font-semibold">Practice Workspace</Link> and click Submit & Evaluate.
@@ -151,4 +176,3 @@ export default function SubmissionsPage() {
     </div>
   );
 }
-

@@ -7,6 +7,7 @@ import { Bar, Doughnut } from 'react-chartjs-2';
 import CodeEditor from '../components/workspace/CodeEditor';
 import { cn } from '../utils/utils';
 import { useToast } from '../components/ui/use-toast';
+import { useSearchParams } from 'react-router-dom';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
 
@@ -34,6 +35,8 @@ function parseExpectedValue(input) {
 export default function TrainerPanel() {
   const [activeTab, setActiveTab] = useState('builder');
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const requestedQuestionId = Number(searchParams.get('questionId') || 0) || null;
 
   const [questions, setQuestions] = useState([]);
   const [selectedQuestionId, setSelectedQuestionId] = useState(null);
@@ -125,7 +128,8 @@ export default function TrainerPanel() {
         const qs = Array.isArray(data.questions) ? data.questions : [];
         setQuestions(qs);
         if (qs.length > 0) {
-          setSelectedQuestionId((prev) => (prev == null ? qs[0].id : prev));
+          const requested = requestedQuestionId && qs.some((x) => x.id === requestedQuestionId) ? requestedQuestionId : null;
+          setSelectedQuestionId((prev) => (requested ? requested : (prev == null ? qs[0].id : prev)));
         }
       } catch (e) {
         toast({ title: 'Load Failed', description: e?.message || 'Could not load questions.', variant: 'destructive' });
@@ -136,7 +140,7 @@ export default function TrainerPanel() {
 
     loadQuestions();
     return () => { cancelled = true; };
-  }, [toast]);
+  }, [requestedQuestionId, toast]);
 
   useEffect(() => {
     let cancelled = false;
@@ -369,7 +373,7 @@ export default function TrainerPanel() {
                   type="button"
                   onClick={() => {
                     setShowAddQuestion(true);
-                    setTimeout(() => addQuestionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 0);
+                    setTimeout(() => addQuestionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
                   }}
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors"
                 >
@@ -378,30 +382,7 @@ export default function TrainerPanel() {
                 {questionsLoading && <Loader2 size={16} className="animate-spin text-gray-400" />}
               </div>
             </div>
-            <div className="p-4 flex-1 overflow-y-auto">
-              {questions.length === 0 && !questionsLoading ? (
-                <div className="text-sm text-gray-500">No questions yet.</div>
-              ) : (
-                <div className="space-y-2">
-                  {questions.map((q) => (
-                    <button
-                      key={q.id}
-                      onClick={() => setSelectedQuestionId(q.id)}
-                      className={cn(
-                        "w-full text-left px-3 py-2 rounded-xl border transition-colors",
-                        selectedQuestionId === q.id
-                          ? "border-indigo-200 bg-indigo-50 text-indigo-900"
-                          : "border-gray-100 bg-white hover:bg-gray-50 text-gray-800"
-                      )}
-                    >
-                      <div className="text-sm font-semibold truncate">{q.title}</div>
-                      <div className="text-xs text-gray-500 truncate">ID: {q.id}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div ref={addQuestionRef} className="border-t border-gray-100 bg-gray-50/30">
+            <div ref={addQuestionRef} className="border-b border-gray-100 bg-gray-50/30">
               <button
                 type="button"
                 onClick={() => setShowAddQuestion((v) => !v)}
@@ -432,7 +413,7 @@ export default function TrainerPanel() {
                   value={newQuestionDescription}
                   onChange={(e) => setNewQuestionDescription(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 resize-none"
-                  placeholder="Short description…"
+                  placeholder="Short description..."
                 />
               </div>
               <button
@@ -444,9 +425,32 @@ export default function TrainerPanel() {
                 )}
               >
                 {creatingQuestion ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                Add Question
+                Create
               </button>
-              </div>
+               </div>
+               )}
+             </div>
+            <div className="p-4 flex-1 overflow-y-auto">
+              {questions.length === 0 && !questionsLoading ? (
+                <div className="text-sm text-gray-500">No questions yet.</div>
+              ) : (
+                <div className="space-y-2">
+                  {questions.map((q) => (
+                    <button
+                      key={q.id}
+                      onClick={() => setSelectedQuestionId(q.id)}
+                      className={cn(
+                        "w-full text-left px-3 py-2 rounded-xl border transition-colors",
+                        selectedQuestionId === q.id
+                          ? "border-indigo-200 bg-indigo-50 text-indigo-900"
+                          : "border-gray-100 bg-white hover:bg-gray-50 text-gray-800"
+                      )}
+                    >
+                      <div className="text-sm font-semibold truncate">{q.title}</div>
+                      <div className="text-xs text-gray-500 truncate">ID: {q.id}</div>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           </div>

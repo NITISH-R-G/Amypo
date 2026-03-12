@@ -91,10 +91,13 @@ const worker = new Worker('evaluation-queue', async job => {
       execution_timings: result.timings,
       ai_feedback: feedback,
       failed_tests: result.failedTests,
-      visual_artifacts: result.visualArtifacts
+      visual_artifacts: result.visualArtifacts,
+      a11y_score: result.scores.a11y || 0,
+      a11y_violations: result.a11yViolations || []
     });
 
-    const totalScore = result.scores.html + result.scores.css + result.scores.js + result.scores.visual;
+    const totalScore = result.total_score || 
+      (result.scores.html + result.scores.css + result.scores.js + result.scores.visual + (result.scores.a11y || 0));
 
     await submission.update({
       status: 'completed',

@@ -38,6 +38,11 @@ const EvaluationRun = sequelize.define('EvaluationRun', {
   visual_artifacts: {
     type: DataTypes.JSONB,
     defaultValue: []
+  },
+  a11y_score: { type: DataTypes.FLOAT, defaultValue: 0 },
+  a11y_violations: {
+    type: DataTypes.JSONB,
+    defaultValue: []
   }
 }, {
   tableName: 'evaluation_runs',

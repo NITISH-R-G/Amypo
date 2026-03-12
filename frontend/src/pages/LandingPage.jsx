@@ -7,7 +7,15 @@ export default function LandingPage() {
     <div className="w-full flex-1 flex flex-col items-center mt-12 mb-24">
       
       {/* Hero Section */}
-      <div className="text-center max-w-3xl px-4 py-16">
+      <div className="text-center max-w-3xl px-4 py-8">
+        <div className="flex justify-center mb-8">
+          <img 
+            src="/amypo-logo.png" 
+            alt="Amypo" 
+            className="adaptive-logo h-12 w-auto object-contain"
+          />
+        </div>
+
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 font-semibold mb-6">
           <Sparkles size={16} /> <span className="text-sm">V2.0 is Live &mdash; Smarter Assessments</span>
         </div>

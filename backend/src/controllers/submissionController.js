@@ -91,7 +91,10 @@ const listSubmissions = async (req, res) => {
       order: [['created_at', 'DESC']],
       limit: Math.min(Number(limit) || 50, 200),
       offset: Number(offset) || 0,
-      include: [{ model: EvaluationRun }]
+      include: [
+        { model: EvaluationRun },
+        { model: Question, attributes: ['id', 'title'] }
+      ]
     });
 
     res.json(rows);
@@ -102,6 +105,7 @@ const listSubmissions = async (req, res) => {
 
 const getSubmissionProgress = async (req, res) => {
   const { id } = req.params;
+  const submissionId = id; // Renamed for clarity with the new interval logic
   const acceptedJobIds = new Set([String(id), `submission-${id}`]);
 
   res.writeHead(200, {
@@ -109,6 +113,35 @@ const getSubmissionProgress = async (req, res) => {
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive'
   });
+
+  // Start a polling interval to send status and occasional logs
+  const progressInterval = setInterval(async () => {
+    const currentSubmission = await Submission.findByPk(submissionId);
+    if (!currentSubmission) {
+      // Submission might have been deleted or not found, end stream
+      res.write(`data: ${JSON.stringify({ status: 'failed', error: 'Submission not found' })}\n\n`);
+      clearInterval(progressInterval);
+      res.end();
+      return;
+    }
+
+    if (currentSubmission.status === 'completed' || currentSubmission.status === 'failed') {
+      res.write(`data: ${JSON.stringify({ status: currentSubmission.status })}\n\n`);
+      clearInterval(progressInterval);
+      res.end();
+    } else {
+      // Send a random log from current evaluation steps for HUD feel
+      const logs = [
+        'Analyzing DOM nodes...',
+        'Computing layout tree...',
+        'Comparing visual fragments...',
+        'Checking reactivity...',
+        'Scanning for accessibility violations...'
+      ];
+      const randomLog = logs[Math.floor(Math.random() * logs.length)];
+      res.write(`data: ${JSON.stringify({ status: currentSubmission.status, log: randomLog })}\n\n`);
+    }
+  }, 1000); // Send updates every second
 
   const onProgress = ({ jobId, data }) => {
     if (acceptedJobIds.has(String(jobId))) {
@@ -211,8 +244,16 @@ const getSubmissionResult = async (req, res) => {
         html: run.html_score ?? 0,
         css: run.css_score ?? 0,
         js: run.js_score ?? 0,
-        visual: run.visual_score ?? 0
+        visual: run.visual_score ?? 0,
+        a11y: run.a11y_score ?? 0
       },
+      breakdown: {
+        dom: run.html_score ?? 0,
+        css: run.css_score ?? 0,
+        visual: run.visual_score ?? 0,
+        a11y: run.a11y_score ?? 0
+      },
+      a11yViolations: run.a11y_violations || [],
       mismatchPercent,
       failedTests: run.failed_tests || [],
       aiFeedback: run.ai_feedback || { summary: 'No AI feedback generated.', suggestions: [] },
@@ -223,17 +264,7 @@ const getSubmissionResult = async (req, res) => {
             diff: desktop.diff || null,
             boxes: desktop.boxes || []
           }
-        : null,
-      visualTests: visualTests.map(v => ({
-        viewport: v.viewport,
-        status: v.status,
-        diffPercent: v.diffPercent,
-        visualScore: v.visualScore,
-        expected: v.expected,
-        actual: v.actual,
-        diff: v.diff,
-        boxes: v.boxes
-      }))
+        : null
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

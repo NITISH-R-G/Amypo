@@ -278,9 +278,24 @@ async function evaluateSubmission(runId, submissionId, htmlCode, cssCode, jsCode
       });
     }
 
+    // 4. Accessibility Audit (A11y)
+    let a11yResults = null;
+    try {
+      if (job) await job.updateProgress({ stage: 'a11y', message: 'Running A11y Audit...' });
+      
+      // Inject axe-core
+      await page.addScriptTag({ url: 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.7.0/axe.min.js' });
+      
+      a11yResults = await page.evaluate(async () => {
+        return await window.axe.run();
+      });
+    } catch (e) {
+      console.error('A11y Audit Error:', e);
+    }
+
     if (job) await job.updateProgress({ stage: `Calculating score` });
     const avgVisualScore = viewports.length > 0 ? aggregatedVisualScore / viewports.length : testSpec?.rubric?.visual || 10;
-    const finalScores = calculatePartialScores(domResults, cssResults, null, testSpec?.rubric);
+    const finalScores = calculatePartialScores(domResults, cssResults, a11yResults, testSpec?.rubric);
     finalScores.visual = avgVisualScore;
 
     const failedTests = [...domResults, ...cssResults].filter(r => !r.passed);
@@ -335,10 +350,25 @@ async function evaluateSubmission(runId, submissionId, htmlCode, cssCode, jsCode
     const execTime = Date.now() - startTime;
     return {
       scores: finalScores,
+      total_score: Object.values(finalScores).reduce((a, b) => a + b, 0),
+      breakdown: finalScores,
       failedTests,
       consoleErrors,
       layoutHints,
-      visualArtifacts,
+      a11yViolations: a11yResults ? a11yResults.violations.map(v => ({
+        id: v.id,
+        impact: v.impact,
+        description: v.description,
+        help: v.help,
+        nodes: v.nodes.length
+      })) : [],
+      visualArtifacts: {
+        expected: visualArtifacts[0]?.expected || null,
+        actual: visualArtifacts[0]?.actual || null,
+        diff: visualArtifacts[0]?.diff || null,
+        boxes: visualArtifacts[0]?.hotspots || []
+      },
+      mismatchPercent: visualArtifacts[0]?.diffPercent || 0,
       timings: { puppeteer_eval: `${execTime}ms` }
     };
   } catch (error) {
