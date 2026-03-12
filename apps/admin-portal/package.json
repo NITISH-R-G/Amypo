@@ -1,0 +1,12 @@
+{
+  "name": "admin-portal",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Run admin-portal dev'",
+    "build": "echo 'Run admin-portal build'",
+    "lint": "echo 'Run admin-portal lint'"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

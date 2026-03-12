@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evaluation-worker
+  namespace: eval-system
+  labels:
+    app: evaluation-worker
+spec:
+  # Replicas are omitted here because KEDA will manage scaling automatically
+  selector:
+    matchLabels:
+      app: evaluation-worker
+  template:
+    metadata:
+      labels:
+        app: evaluation-worker
+    spec:
+      runtimeClassName: gvisor
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: puppeteer-worker
+          # Replace with your actual Docker registry image
+          image: ghcr.io/your-org/evaluation-worker:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 1Gi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+          env:
+            - name: REDIS_HOST
+              value: "redis-master.data.svc.cluster.local"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: WORKER_CONCURRENCY
+              value: "5"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: password
+          # Security context needed if using a non-root puppeteer user
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL

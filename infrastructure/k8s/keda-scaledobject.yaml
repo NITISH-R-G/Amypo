@@ -1,0 +1,39 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: evaluation-worker-scaler
+  namespace: eval-system
+spec:
+  scaleTargetRef:
+    # Target our evaluation-worker Deployment
+    name: evaluation-worker
+  pollingInterval: 15     # How often KEDA checks Redis (in seconds)
+  cooldownPeriod:  30     # How long to wait before scaling down after queue is empty (in seconds)
+  minReplicaCount: 0      # Scale to zero when there's no work
+  maxReplicaCount: 100    # Maximum number of worker pods
+  triggers:
+    - type: redis
+      metadata:
+        # Scale 1 pod for every 5 jobs in the queue
+        listLength: "5"
+        # The key of the BullMQ queue list in Redis
+        # BullMQ default keys are 'bull:{queueName}:wait'
+        listName: bull:evaluation-queue:wait
+        # Format connection details. We use Auth mode.
+        addressFromEnv: REDIS_HOST # This requires KEDA to lookup the host from the target or a Secret
+        portFromEnv: REDIS_PORT
+        passwordFromEnv: REDIS_PASSWORD
+      # Alternatively, using TriggerAuthentication for cleaner secrets management:
+      authenticationRef:
+        name: keda-redis-trigger-auth
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-redis-trigger-auth
+  namespace: eval-system
+spec:
+  secretTargetRef:
+    - parameter: password
+      name: redis-secret
+      key: password
