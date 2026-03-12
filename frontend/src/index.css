@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+@theme {
+  --font-sans: "Inter", "Geist", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  
+  --color-border: hsl(214 32% 91%);
+  --color-input: hsl(214 32% 91%);
+  --color-ring: hsl(221 83% 53%);
+  --color-background: hsl(0 0% 100%);
+  --color-foreground: hsl(222 47% 11%);
+  
+  --color-primary-DEFAULT: hsl(221 83% 53%);
+  --color-primary-foreground: hsl(210 40% 98%);
+  
+  --color-secondary-DEFAULT: hsl(210 40% 96%);
+  --color-secondary-foreground: hsl(222 47% 11%);
+  
+  --color-destructive-DEFAULT: hsl(0 84% 60%);
+  --color-destructive-foreground: hsl(210 40% 98%);
+  
+  --color-muted-DEFAULT: hsl(210 40% 96%);
+  --color-muted-foreground: hsl(215 16% 47%);
+  
+  --color-accent-DEFAULT: hsl(210 40% 96%);
+  --color-accent-foreground: hsl(222 47% 11%);
+  
+  --radius-lg: 0.5rem;
+  --radius-md: calc(0.5rem - 2px);
+  --radius-sm: calc(0.5rem - 4px);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    @apply antialiased font-sans bg-gray-50;
+  }
+  
+  /* Scrollbar override for professional feel */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}

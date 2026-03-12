@@ -1,0 +1,42 @@
+{
+  "name": "assessment-engine",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "worker"
+  ],
+  "scripts": {
+    "start:backend": "npm run start --workspace=backend",
+    "start:worker": "npm run start --workspace=worker",
+    "start:frontend": "npm run dev --workspace=frontend",
+    "start": "node index.js"
+  },
+  "description": "",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bullmq": "^5.71.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "eslint": "^10.0.3",
+    "express": "^5.2.1",
+    "htmlhint": "^1.9.2",
+    "ioredis": "^5.10.0",
+    "pg": "^8.20.0",
+    "pg-hstore": "^2.3.4",
+    "pixelmatch": "^7.1.0",
+    "pngjs": "^7.0.0",
+    "puppeteer": "^24.39.0",
+    "sequelize": "^6.37.8",
+    "stylelint": "^17.4.0",
+    "stylelint-config-standard": "^40.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
