@@ -9,7 +9,10 @@ async function generateFeedback(failedTests, consoleErrors, layoutHints, visualA
   let summary = "Your code passed all tests perfectly.";
   let difficulty_estimate = "none";
 
-  const totalVisualDiff = visualArtifacts.reduce((sum, v) => sum + (v.diffPercentage || 0), 0);
+  const totalVisualDiff = visualArtifacts.reduce((sum, v) => {
+    const p = Number(v?.diffPercent ?? v?.diffPercentage ?? 0);
+    return sum + (Number.isFinite(p) ? p : 0);
+  }, 0);
   const avgVisualDiff = visualArtifacts.length > 0 ? totalVisualDiff / visualArtifacts.length : 0;
 
   if (failedTests.length > 0 || consoleErrors.length > 0 || avgVisualDiff > 2) {

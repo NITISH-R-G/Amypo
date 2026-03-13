@@ -56,12 +56,15 @@ services:
       - DB_NAME=assessment_engine
       - REDIS_HOST=redis
       - WORKER_CONCURRENCY=2
+      - SANDBOX_HARD_TIMEOUT_MS=20000
+    cpus: 0.5
+    mem_limit: 512m
     # Define container resource limits (CPU/Mem constraints per worker)
     deploy:
       resources:
         limits:
-          cpus: '1.0'
-          memory: 1G
+          cpus: '0.5'
+          memory: 512M
     depends_on:
       postgres:
         condition: service_healthy
@@ -78,6 +81,9 @@ services:
       - "5173:5173"
     environment:
       - NODE_ENV=development
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
 
 volumes:
   pgdata:

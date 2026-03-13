@@ -56,3 +56,49 @@
     background: #94a3b8;
   }
 }
+
+/* Minimal global dark theme support (no redesign).
+   This keeps existing layouts intact and flips common utility colors. */
+html[data-theme='dark'] body {
+  background-color: #0f172a !important;
+  color: #f9fafb !important;
+}
+html[data-theme='dark'] .bg-gray-50 {
+  background-color: #0f172a !important;
+}
+html[data-theme='dark'] .bg-white {
+  background-color: #111827 !important;
+}
+html[data-theme='dark'] .bg-gray-50\/50,
+html[data-theme='dark'] .bg-gray-50\/30,
+html[data-theme='dark'] .bg-gray-100,
+html[data-theme='dark'] .bg-gray-100\/50 {
+  background-color: #0b1220 !important;
+}
+html[data-theme='dark'] .border-gray-50,
+html[data-theme='dark'] .border-gray-100,
+html[data-theme='dark'] .border-gray-200 {
+  border-color: #1f2937 !important;
+}
+html[data-theme='dark'] .text-gray-900 {
+  color: #f9fafb !important;
+}
+html[data-theme='dark'] .text-gray-700,
+html[data-theme='dark'] .text-gray-600 {
+  color: #e5e7eb !important;
+}
+html[data-theme='dark'] .text-gray-500,
+html[data-theme='dark'] .text-gray-400 {
+  color: #9ca3af !important;
+}
+html[data-theme='dark'] .shadow-sm,
+html[data-theme='dark'] .shadow-md,
+html[data-theme='dark'] .shadow-xl {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35) !important;
+}
+html[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+html[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}

@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [nextModule, setNextModule] = useState({ title: null, questionId: null });
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -20,6 +21,45 @@ export default function Dashboard() {
       }
     };
     fetchUser();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const [qRes, sRes] = await Promise.all([
+          fetch('/api/questions'),
+          fetch('/api/submissions?student_id=1&limit=200')
+        ]);
+        const qJson = await qRes.json().catch(() => ({}));
+        const sJson = await sRes.json().catch(() => ([]));
+        const questions = Array.isArray(qJson?.questions) ? qJson.questions : [];
+        const submissions = Array.isArray(sJson) ? sJson : [];
+
+        const completed = new Set(
+          submissions
+            .filter((s) => String(s?.status || '').toLowerCase() === 'completed')
+            .map((s) => Number(s?.question_id))
+            .filter(Boolean)
+        );
+
+        const next = questions
+          .slice()
+          .sort((a, b) => Number(a?.order_index ?? a?.id) - Number(b?.order_index ?? b?.id))
+          .find((q) => !completed.has(Number(q?.id)));
+
+        if (!cancelled) {
+          setNextModule({
+            title: next?.title || (questions.length ? 'All modules complete' : null),
+            questionId: next?.id ?? null
+          });
+        }
+      } catch (_) {
+        // Non-fatal; keep the roadmap card functional.
+      }
+    };
+    run();
+    return () => { cancelled = true; };
   }, []);
 
   return (
@@ -55,7 +95,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <Link 
           to="/roadmap"
-          className="lg:col-span-2 relative overflow-hidden bg-indigo-600 p-8 rounded-[2.5rem] shadow-xl shadow-indigo-100 group transition-all hover:-translate-y-1"
+          className="lg:col-span-2 relative overflow-hidden bg-emerald-600 p-8 rounded-[2.5rem] shadow-xl shadow-emerald-100 group transition-all hover:-translate-y-1"
         >
           <div className="relative z-10 h-full flex flex-col justify-between">
             <div>
@@ -63,7 +103,7 @@ export default function Dashboard() {
                 <BookOpen size={20} />
               </div>
               <h2 className="text-2xl font-black text-white mb-2">Learning Roadmap</h2>
-              <p className="text-indigo-100 font-medium text-sm leading-relaxed max-w-sm">
+              <p className="text-emerald-100 font-medium text-sm leading-relaxed max-w-sm">
                 Track your progress through the professional web development curriculum.
               </p>
               
@@ -73,8 +113,8 @@ export default function Dashboard() {
                    <ChevronRight size={24} />
                 </div>
                 <div>
-                   <div className="text-[10px] font-black uppercase tracking-widest text-indigo-200">Next Module</div>
-                   <div className="text-sm font-bold text-white">Advanced CSS Grid Layouts</div>
+                   <div className="text-[10px] font-black uppercase tracking-widest text-emerald-200">Next Module</div>
+                   <div className="text-sm font-bold text-white">{nextModule.title || 'Loading...'}</div>
                 </div>
               </div>
             </div>
@@ -84,18 +124,18 @@ export default function Dashboard() {
           </div>
           
           {/* Abstract background shapes */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl opacity-50" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-400 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl opacity-30" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl opacity-50" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-400 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl opacity-30" />
         </Link>
         <Link
           to="/student"
-          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all group"
+          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-200 hover:shadow-md transition-all group"
         >
           <div className="flex items-center justify-between">
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
               <TerminalSquare size={22} />
             </div>
-            <ArrowRight className="text-gray-300 group-hover:text-indigo-600 transition-colors" size={20} />
+            <ArrowRight className="text-gray-300 group-hover:text-emerald-600 transition-colors" size={20} />
           </div>
           <h2 className="mt-4 font-bold text-gray-900">Practice Workspace</h2>
           <p className="text-sm text-gray-500 mt-1">Write code and run evaluations.</p>
@@ -103,13 +143,13 @@ export default function Dashboard() {
 
         <Link
           to="/submissions"
-          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all group"
+          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-200 hover:shadow-md transition-all group"
         >
           <div className="flex items-center justify-between">
             <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
               <FileVideo size={22} />
             </div>
-            <ArrowRight className="text-gray-300 group-hover:text-indigo-600 transition-colors" size={20} />
+            <ArrowRight className="text-gray-300 group-hover:text-emerald-600 transition-colors" size={20} />
           </div>
           <h2 className="mt-4 font-bold text-gray-900">My Submissions</h2>
           <p className="text-sm text-gray-500 mt-1">Track status, score, and reports.</p>
@@ -117,13 +157,13 @@ export default function Dashboard() {
 
         <Link
           to="/analytics"
-          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all group"
+          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-200 hover:shadow-md transition-all group"
         >
           <div className="flex items-center justify-between">
             <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
               <BarChart3 size={22} />
             </div>
-            <ArrowRight className="text-gray-300 group-hover:text-indigo-600 transition-colors" size={20} />
+            <ArrowRight className="text-gray-300 group-hover:text-emerald-600 transition-colors" size={20} />
           </div>
           <h2 className="mt-4 font-bold text-gray-900">Analytics</h2>
           <p className="text-sm text-gray-500 mt-1">Cohort performance and common failures.</p>

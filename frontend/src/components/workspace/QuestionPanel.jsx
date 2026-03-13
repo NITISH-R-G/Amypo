@@ -28,7 +28,7 @@ export default function QuestionPanel({ question }) {
           <ul className="space-y-3">
             {question.requirements.map((req, idx) => (
               <li key={idx} className="flex gap-3 text-sm text-gray-700">
-                <span className="text-indigo-500 mt-0.5">•</span>
+                <span className="text-emerald-500 mt-0.5">•</span>
                 <span>{req}</span>
               </li>
             ))}
@@ -38,3 +38,4 @@ export default function QuestionPanel({ question }) {
     </div>
   );
 }
+

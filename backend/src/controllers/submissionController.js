@@ -1,7 +1,48 @@
 const { Submission, Question, EvaluationRun, Artifact, User } = require('../models');
+const path = require('path');
+const fs = require('fs');
 const staticValidationService = require('../services/staticValidationService');
 const { enqueueEvaluation, queueEvents } = require('../services/queueService');
 const { updateStreak } = require('../utils/streakManager');
+
+const getRequestUser = async (req) => {
+  try {
+    const id = req.header('x-user-id');
+    if (!id) return null;
+    return await User.findByPk(String(id));
+  } catch (_) {
+    return null;
+  }
+};
+
+const requireAdmin = async (req, res) => {
+  const actor = await getRequestUser(req);
+  if (!actor || actor.role !== 'admin') {
+    res.status(403).json({ error: 'Admin only' });
+    return null;
+  }
+  return actor;
+};
+
+const resolveRunForSubmission = async (submissionId, requestedRunId = null) => {
+  const sid = Number(submissionId);
+  if (!sid) return null;
+
+  if (requestedRunId != null) {
+    const rid = Number(requestedRunId);
+    if (!rid) return null;
+    const run = await EvaluationRun.findByPk(rid, { include: [Artifact] });
+    if (!run) return null;
+    if (Number(run.submission_id) !== sid) return null;
+    return run;
+  }
+
+  return await EvaluationRun.findOne({
+    where: { submission_id: sid },
+    include: [Artifact],
+    order: [['created_at', 'DESC'], ['id', 'DESC']]
+  });
+};
 
 const submitCode = async (req, res) => {
   try {
@@ -59,6 +100,42 @@ const submitCode = async (req, res) => {
   } catch (error) {
     console.error('Submit Code Error:', error);
     res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// FR-8: Replay evaluation for the same submission (Admin-only).
+const replaySubmissionEvaluation = async (req, res) => {
+  try {
+    const actor = await requireAdmin(req, res);
+    if (!actor) return;
+
+    const { id } = req.params; // submission id
+    const submission = await Submission.findByPk(id);
+    if (!submission) return res.status(404).json({ error: 'Submission not found' });
+
+    // Create a fresh EvaluationRun row and enqueue the worker with that run id.
+    const run = await EvaluationRun.create({
+      submission_id: submission.id,
+      html_score: 0,
+      css_score: 0,
+      js_score: 0,
+      visual_score: 0,
+      quality_score: 0,
+      a11y_score: 0,
+      console_errors: [],
+      execution_timings: {},
+      ai_feedback: { summary: 'Replay queued...', suggestions: [] },
+      failed_tests: [],
+      visual_artifacts: [],
+      a11y_violations: []
+    });
+
+    await submission.update({ status: 'pending', total_score: null });
+    await enqueueEvaluation(submission.id, run.id);
+
+    return res.json({ message: 'Replay successfully queued', submission_id: submission.id, run_id: run.id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -184,26 +261,32 @@ const getSubmissionProgress = async (req, res) => {
 const getSubmissionResult = async (req, res) => {
   try {
     const { id } = req.params;
-    const submission = await Submission.findByPk(id, {
-      include: [
-        {
-          model: EvaluationRun,
-          include: [Artifact]
-        }
-      ]
-    });
+    const submission = await Submission.findByPk(id);
 
     if (!submission) return res.status(404).json({ error: 'Submission not found' });
 
     // If worker hasn't written a run yet, report status and let the UI keep polling.
-    if (!submission.EvaluationRun) {
+    const run = await resolveRunForSubmission(submission.id, req.query.run_id);
+    if (!run) {
       return res.json({
         status: submission.status,
         submission_id: submission.id
       });
     }
 
-    const run = submission.EvaluationRun;
+    const artifactsRoot = path.resolve(__dirname, '..', '..', '..', 'artifacts');
+    const runArtifactsDir = path.join(artifactsRoot, String(run.id));
+
+    const safeBasename = (p) => {
+      if (!p) return null;
+      const base = path.basename(String(p));
+      // Reject path traversal attempts.
+      if (base.includes('..') || base.includes('/') || base.includes('\\')) return null;
+      return base;
+    };
+
+    const artifactUrl = (filename) =>
+      `/api/submissions/${submission.id}/artifacts/${encodeURIComponent(filename)}?run_id=${encodeURIComponent(String(run.id))}`;
 
     // Prefer run.visual_artifacts (worker output). Fall back to Artifacts table if present.
     let visualTests = [];
@@ -213,31 +296,69 @@ const getSubmissionResult = async (req, res) => {
         status: v.status || (v.diffPercent != null ? 'passed' : 'failed'),
         diffPercent: Number(v.diffPercent ?? 0),
         visualScore: Number(v.visualScore ?? 0),
-        expected: v.expected || null,
-        actual: v.actual || null,
-        diff: v.diff || null,
+        viewportWidth: Number(v.viewportWidth ?? 0) || null,
+        viewportHeight: Number(v.viewportHeight ?? 0) || null,
+        comparisonWidth: Number(v.comparisonWidth ?? 0) || null,
+        comparisonHeight: Number(v.comparisonHeight ?? 0) || null,
+        expected: safeBasename(v.expected) ? artifactUrl(safeBasename(v.expected)) : null,
+        actual: safeBasename(v.actual) ? artifactUrl(safeBasename(v.actual)) : null,
+        diff: safeBasename(v.diff) ? artifactUrl(safeBasename(v.diff)) : null,
+        expectedRenderUrl: safeBasename(v.expectedRender) ? artifactUrl(safeBasename(v.expectedRender)) : null,
+        actualRenderUrl: safeBasename(v.actualRender) ? artifactUrl(safeBasename(v.actualRender)) : null,
         boxes: v.hotspots || []
       }));
     } else if (Array.isArray(run.Artifacts) && run.Artifacts.length > 0) {
-      // Artifacts table format: expected/actual/diff types per viewport.
+      // Artifacts table format: one row per viewport with expected/actual/diff image paths.
       const viewports = [...new Set(run.Artifacts.map(a => a.viewport))];
       visualTests = viewports.map(vp => {
         const acts = run.Artifacts.filter(a => a.viewport === vp);
+        const row = acts[0] || {};
+        const expectedName = safeBasename(row.expected_image_path);
+        const actualName = safeBasename(row.actual_image_path);
+        const diffName = safeBasename(row.diff_image_path);
+
         return {
           viewport: vp,
-          status: 'passed',
-          diffPercent: Number(acts.find(a => a.type === 'diff')?.mismatch_percentage ?? 0),
+          status: diffName ? 'passed' : 'failed',
+          diffPercent: 0,
           visualScore: 0,
-          expected: acts.find(a => a.type === 'expected')?.url || null,
-          actual: acts.find(a => a.type === 'actual')?.url || null,
-          diff: acts.find(a => a.type === 'diff')?.url || null,
-          boxes: acts.find(a => a.type === 'diff')?.diff_boxes || []
+          expected: expectedName ? artifactUrl(expectedName) : null,
+          actual: actualName ? artifactUrl(actualName) : null,
+          diff: diffName ? artifactUrl(diffName) : null,
+          boxes: []
         };
       });
     }
 
+    // Persist artifact metadata in DB (local volume storage). This is idempotent.
+    // If you later switch to S3, replace these paths with bucket keys.
+    try {
+      for (const vt of visualTests) {
+        const viewport = String(vt.viewport || '');
+        if (!viewport) continue;
+        const expectedFile = `expected_${viewport}.png`;
+        const actualFile = `actual_${viewport}.png`;
+        const diffFile = `diff_${viewport}.png`;
+
+        const row = await Artifact.findOne({ where: { run_id: run.id, viewport } });
+        const next = {
+          run_id: run.id,
+          viewport,
+          expected_image_path: fs.existsSync(path.join(runArtifactsDir, expectedFile)) ? path.join(String(run.id), expectedFile) : null,
+          actual_image_path: fs.existsSync(path.join(runArtifactsDir, actualFile)) ? path.join(String(run.id), actualFile) : null,
+          diff_image_path: fs.existsSync(path.join(runArtifactsDir, diffFile)) ? path.join(String(run.id), diffFile) : null
+        };
+
+        if (row) await row.update(next);
+        else await Artifact.create(next);
+      }
+    } catch (_) {
+      // Non-fatal: DB persistence shouldn't block showing results.
+    }
+
     const desktop = visualTests.find(v => v.viewport === 'desktop') || visualTests[0] || null;
     const mismatchPercent = Number(desktop?.diffPercent ?? 0);
+    const mismatchPercentage = mismatchPercent;
 
     return res.json({
       status: submission.status,
@@ -249,16 +370,20 @@ const getSubmissionResult = async (req, res) => {
         css: run.css_score ?? 0,
         js: run.js_score ?? 0,
         visual: run.visual_score ?? 0,
-        a11y: run.a11y_score ?? 0
+        a11y: run.a11y_score ?? 0,
+        quality: run.quality_score ?? 0
       },
       breakdown: {
         dom: run.html_score ?? 0,
         css: run.css_score ?? 0,
         visual: run.visual_score ?? 0,
-        a11y: run.a11y_score ?? 0
+        a11y: run.a11y_score ?? 0,
+        quality: run.quality_score ?? 0
       },
       a11yViolations: run.a11y_violations || [],
       mismatchPercent,
+      mismatchPercentage,
+      visualTests,
       failedTests: run.failed_tests || [],
       aiFeedback: run.ai_feedback || { summary: 'No AI feedback generated.', suggestions: [] },
       visualArtifacts: desktop
@@ -266,6 +391,10 @@ const getSubmissionResult = async (req, res) => {
             expected: desktop.expected || null,
             actual: desktop.actual || null,
             diff: desktop.diff || null,
+            expectedRenderUrl: desktop.expectedRenderUrl || null,
+            actualRenderUrl: desktop.actualRenderUrl || null,
+            comparisonWidth: desktop.comparisonWidth || null,
+            comparisonHeight: desktop.comparisonHeight || null,
             boxes: desktop.boxes || []
           }
         : null
@@ -275,10 +404,72 @@ const getSubmissionResult = async (req, res) => {
   }
 };
 
+const getSubmissionArtifact = async (req, res) => {
+  try {
+    const { id, filename } = req.params;
+    const safeName = path.basename(String(filename || ''));
+    if (!safeName || safeName.includes('..')) return res.status(400).send('Invalid filename');
+
+    const submission = await Submission.findByPk(id);
+    if (!submission) return res.status(404).send('Submission not found');
+    const run = await resolveRunForSubmission(submission.id, req.query.run_id);
+    if (!run) return res.status(404).send('Artifacts not ready');
+
+    // Allow only known artifact file types; prevents probing arbitrary files on the volume.
+    const allowed =
+      safeName === 'dom_snapshot.html' ||
+      safeName === 'report.pdf' ||
+      /^expected_dom_snapshot_[a-z0-9_-]+\.html$/i.test(safeName) ||
+      /^actual_dom_snapshot_[a-z0-9_-]+\.html$/i.test(safeName) ||
+      /^expected_[a-z0-9_-]+\.png$/i.test(safeName) ||
+      /^actual_[a-z0-9_-]+\.png$/i.test(safeName) ||
+      /^diff_[a-z0-9_-]+\.png$/i.test(safeName);
+    if (!allowed) return res.status(403).send('Forbidden');
+
+    const artifactsRoot = path.resolve(__dirname, '..', '..', '..', 'artifacts');
+    const runDir = path.join(artifactsRoot, String(run.id));
+    const abs = path.resolve(runDir, safeName);
+    if (!abs.startsWith(runDir)) return res.status(403).send('Forbidden');
+    if (!fs.existsSync(abs)) return res.status(404).send('Not found');
+
+    // Cache immutable run artifacts for a short time.
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    if (/\.html$/i.test(safeName)) {
+      res.type('html');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Referrer-Policy', 'no-referrer');
+      res.setHeader(
+        'Content-Security-Policy',
+        [
+          "default-src 'none'",
+          "script-src 'none'",
+          "connect-src 'none'",
+          "object-src 'none'",
+          "base-uri 'none'",
+          "form-action 'none'",
+          "frame-ancestors 'self'",
+          "style-src 'unsafe-inline' https: data:",
+          "img-src 'self' data: blob: https: http:",
+          "font-src 'self' data: https: http:",
+          "media-src 'self' data: https: http:",
+          'sandbox'
+        ].join('; ')
+      );
+      return res.send(fs.readFileSync(abs, 'utf8'));
+    }
+
+    return res.sendFile(abs);
+  } catch (e) {
+    return res.status(500).send('Server error');
+  }
+};
+
 module.exports = {
   submitCode,
   listSubmissions,
   getSubmissionStatus,
+  replaySubmissionEvaluation,
   getSubmissionProgress,
-  getSubmissionResult
+  getSubmissionResult,
+  getSubmissionArtifact
 };

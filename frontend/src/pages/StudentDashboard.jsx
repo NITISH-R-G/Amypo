@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Play, CheckCircle2, AlertCircle, Maximize2, RotateCcw, Loader2, Sparkles, Server, Check } from 'lucide-react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,6 +8,7 @@ import PreviewFrame from '../components/workspace/PreviewFrame';
 import QuestionPanel from '../components/workspace/QuestionPanel';
 import { cn } from '../utils/utils';
 import { useToast } from '../components/ui/use-toast';
+import { buildPreviewDocument } from '../components/workspace/previewDocument';
 
 const EVALUATION_STAGES = [
   { id: 'package', label: 'Packaging submission', duration: 600 },
@@ -21,6 +22,7 @@ const EVALUATION_STAGES = [
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('html');
   const [questions, setQuestions] = useState([]);
@@ -33,6 +35,20 @@ export default function StudentDashboard() {
   const [code, setCode] = useState({ html: '', css: '', js: '' });
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evalStageIndex, setEvalStageIndex] = useState(-1);
+  const [activeSubmissionId, setActiveSubmissionId] = useState(null);
+
+  const previewDoc = useMemo(() => buildPreviewDocument({ html: code.html, css: code.css, js: code.js }), [code]);
+
+  const openPreviewInNewTab = () => {
+    const w = window.open('', '_blank', 'noopener,noreferrer');
+    if (!w) {
+      toast({ title: 'Popup Blocked', description: 'Allow popups to open the full preview.', variant: 'destructive' });
+      return;
+    }
+    w.document.open();
+    w.document.write(previewDoc);
+    w.document.close();
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -45,7 +61,14 @@ export default function StudentDashboard() {
         if (cancelled) return;
         const qs = Array.isArray(data.questions) ? data.questions : [];
         setQuestions(qs);
-        if (qs.length > 0) setSelectedQuestionId((prev) => (prev == null ? qs[0].id : prev));
+        const fromUrl = searchParams.get('question');
+        const desired = fromUrl != null ? Number(fromUrl) : null;
+        if (qs.length > 0) {
+          setSelectedQuestionId((prev) => {
+            if (desired && qs.some((x) => Number(x.id) === desired)) return desired;
+            return prev == null ? qs[0].id : prev;
+          });
+        }
       } catch (e) {
         toast({ title: 'Load Failed', description: e?.message || 'Could not load questions.', variant: 'destructive' });
       } finally {
@@ -54,7 +77,7 @@ export default function StudentDashboard() {
     }
     loadQuestions();
     return () => { cancelled = true; };
-  }, [toast]);
+  }, [toast, searchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,10 +127,11 @@ export default function StudentDashboard() {
       toast({ title: 'No Question Selected', description: 'Please select a question first.', variant: 'destructive' });
       return;
     }
-    setIsEvaluating(true);
-    setEvalStageIndex(0);
-
-    try {
+      setIsEvaluating(true);
+      setEvalStageIndex(0);
+      setActiveSubmissionId(null);
+  
+      try {
       const res = await fetch('/api/submissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,10 +152,11 @@ export default function StudentDashboard() {
         return;
       }
 
-      const submissionId = data.submission_id;
-
-      // Listen to real-time events from the BullMQ Worker
-      const eventSource = new EventSource(`/api/submissions/${submissionId}/progress`);
+        const submissionId = data.submission_id;
+        setActiveSubmissionId(submissionId);
+  
+        // Listen to real-time events from the BullMQ Worker
+        const eventSource = new EventSource(`/api/submissions/${submissionId}/progress`);
 
       eventSource.onmessage = (e) => {
         const eventData = JSON.parse(e.data);
@@ -185,7 +210,7 @@ export default function StudentDashboard() {
               value={selectedQuestionId ?? ''}
               onChange={(e) => setSelectedQuestionId(Number(e.target.value))}
               disabled={questionsLoading}
-              className="px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm text-gray-700 outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 disabled:opacity-60"
+              className="px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm text-gray-700 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 disabled:opacity-60"
             >
               {questions.map((q) => (
                 <option key={q.id} value={q.id}>{q.title}</option>
@@ -207,7 +232,7 @@ export default function StudentDashboard() {
            <button 
              onClick={handleRunTests}
              disabled={isEvaluating || !selectedQuestionId}
-             className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-all shadow-sm shadow-indigo-600/20 disabled:opacity-70 disabled:cursor-not-allowed"
+             className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium text-sm transition-all shadow-sm shadow-emerald-600/20 disabled:opacity-70 disabled:cursor-not-allowed"
            >
              {isEvaluating ? (
                <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white/80"></div> Evaluating...</>
@@ -228,7 +253,7 @@ export default function StudentDashboard() {
           </div>
         </div>
 
-        <div className="lg:col-span-5 bg-slate-900 rounded-xl shadow-sm border border-slate-800 flex flex-col overflow-hidden shadow-indigo-900/5">
+        <div className="lg:col-span-5 bg-slate-900 rounded-xl shadow-sm border border-slate-800 flex flex-col overflow-hidden shadow-emerald-900/5">
           <Tabs.Root value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
             <Tabs.List className="flex bg-slate-900 border-b border-slate-800 px-2 pt-2 gap-1">
               {['html', 'css', 'js'].map((lang) => (
@@ -238,7 +263,7 @@ export default function StudentDashboard() {
                   className={cn(
                     "px-4 py-2 text-sm font-medium rounded-t-lg transition-all border border-transparent border-b-0",
                     activeTab === lang 
-                      ? "bg-slate-800 text-indigo-400 border-slate-700 shadow-sm" 
+                      ? "bg-slate-800 text-emerald-400 border-slate-700 shadow-sm" 
                       : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
                   )}
                 >
@@ -260,7 +285,13 @@ export default function StudentDashboard() {
            <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden min-h-[300px]">
              <div className="bg-slate-900 text-slate-200 px-4 py-3 text-sm font-semibold border-b border-slate-800 flex items-center justify-between">
                 <span>Live Preview</span>
-                <button className="text-slate-400 hover:text-white transition-colors">
+                <button
+                  type="button"
+                  onClick={openPreviewInNewTab}
+                  className="text-slate-400 hover:text-white transition-colors"
+                  aria-label="Open full preview in new tab"
+                  title="Open full preview"
+                >
                   <Maximize2 size={14} />
                 </button>
              </div>
@@ -271,7 +302,7 @@ export default function StudentDashboard() {
 
            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
              <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-               <AlertCircle size={16} className="text-indigo-500" />
+               <AlertCircle size={16} className="text-emerald-500" />
                Live Diagnostics
              </h3>
              <div className="space-y-2">
@@ -279,8 +310,8 @@ export default function StudentDashboard() {
                   <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
                   <p>Syntax checks passed. No static analysis errors.</p>
                 </div>
-                <div className="flex items-start gap-2 bg-indigo-50 text-indigo-700 p-2.5 rounded-lg text-sm border border-indigo-100">
-                  <div className="mt-0.5 shrink-0 uppercase font-bold text-[10px] tracking-wider bg-indigo-200 px-1.5 py-0.5 rounded text-indigo-800">TIP</div>
+                <div className="flex items-start gap-2 bg-emerald-50 text-emerald-700 p-2.5 rounded-lg text-sm border border-emerald-100">
+                  <div className="mt-0.5 shrink-0 uppercase font-bold text-[10px] tracking-wider bg-emerald-200 px-1.5 py-0.5 rounded text-emerald-800">TIP</div>
                   <p>Make sure to check the button hover color contrast.</p>
                 </div>
              </div>
@@ -303,12 +334,18 @@ export default function StudentDashboard() {
               className="bg-white p-8 rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md"
             >
               <div className="flex items-center gap-3 mb-6">
-                 <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                 <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
                    {evalStageIndex >= EVALUATION_STAGES.length ? <Check size={20} className="text-emerald-500" /> : <Server size={20} className="animate-pulse" />}
                  </div>
                  <div>
                    <h3 className="font-bold text-gray-900 text-lg">Evaluation Pipeline</h3>
-                   <p className="text-sm text-gray-500">Worker ID: <span className="font-mono text-xs">wk-9f8a2b1</span></p>
+                   <p className="text-sm text-gray-500">
+                     {activeSubmissionId ? (
+                       <>Submission ID: <span className="font-mono text-xs">{activeSubmissionId}</span></>
+                     ) : (
+                       <>Submitting to worker poolâ€¦</>
+                     )}
+                   </p>
                  </div>
               </div>
 
@@ -321,11 +358,11 @@ export default function StudentDashboard() {
                       <div className="flex justify-between items-center text-sm">
                         <span className={cn(
                           "font-medium transition-colors duration-300",
-                          isActive ? "text-indigo-600" : isPast ? "text-gray-900" : "text-gray-400"
+                          isActive ? "text-emerald-600" : isPast ? "text-gray-900" : "text-gray-400"
                         )}>
                           {stage.label}
                         </span>
-                        {isActive && <Loader2 size={14} className="text-indigo-500 animate-spin" />}
+                        {isActive && <Loader2 size={14} className="text-emerald-500 animate-spin" />}
                         {isPast && <Check size={14} className="text-emerald-500" />}
                       </div>
                       <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
@@ -335,7 +372,7 @@ export default function StudentDashboard() {
                           transition={isActive ? { duration: stage.duration / 1000, ease: "linear" } : { duration: 0.2 }}
                           className={cn(
                             "h-full rounded-full",
-                            isPast ? "bg-emerald-500" : "bg-indigo-600"
+                            isPast ? "bg-emerald-500" : "bg-emerald-600"
                           )}
                         />
                       </div>
@@ -359,3 +396,4 @@ export default function StudentDashboard() {
     </div>
   );
 }
+

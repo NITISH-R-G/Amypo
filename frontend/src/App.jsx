@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
@@ -27,7 +27,7 @@ function App() {
            <Route path="teacher" element={<TeacherDashboard />} />
            <Route path="teacher/editor" element={<QuestionEditor />} />
            <Route path="teacher/editor/:id" element={<QuestionEditor />} />
-           <Route path="trainer" element={<TrainerPanel />} />
+           <Route path="trainer" element={<Navigate to="/teacher?tab=builder" replace />} />
            <Route path="admin" element={<AdminDashboard />} />
            <Route path="submissions" element={<SubmissionsPage />} />
            <Route path="analytics" element={<AnalyticsPage />} />

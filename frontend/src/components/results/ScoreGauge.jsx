@@ -16,7 +16,7 @@ export default function ScoreGauge({ score, label, size = 'md', color = 'indigo'
   
   // Color variants for Tailwind (simplified mapping)
   const colors = {
-    indigo: { text: 'text-indigo-600', stroke: 'stroke-indigo-600', bg: 'stroke-indigo-100' },
+    indigo: { text: 'text-emerald-600', stroke: 'stroke-emerald-600', bg: 'stroke-emerald-100' },
     emerald: { text: 'text-emerald-500', stroke: 'stroke-emerald-500', bg: 'stroke-emerald-100' },
     amber: { text: 'text-amber-500', stroke: 'stroke-amber-500', bg: 'stroke-amber-100' },
     red: { text: 'text-red-500', stroke: 'stroke-red-500', bg: 'stroke-red-100' },
@@ -64,3 +64,4 @@ export default function ScoreGauge({ score, label, size = 'md', color = 'indigo'
     </div>
   );
 }
+

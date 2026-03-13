@@ -1,29 +1,65 @@
 import { useState, useEffect } from 'react';
-import { Plus, BookOpen, FileCode, CheckCircle2, ChevronRight, Settings2, Trash2, Edit3 } from 'lucide-react';
+import { Plus, BookOpen, FileCode, CheckCircle2, Settings2, Trash2, Edit3, Wrench, BarChart3 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import TrainerPanel from './TrainerPanel';
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = String(searchParams.get('tab') || 'overview').toLowerCase();
+  const [tab, setTab] = useState(
+    initialTab === 'builder' || initialTab === 'analytics' ? initialTab : 'overview'
+  );
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
+  const [submissionCounts, setSubmissionCounts] = useState({});
 
   useEffect(() => {
-    // In a real app, we'd fetch courses from /api/courses
-    // For now, let's fetch questions and group them by course if we had course logic
+    const t = String(searchParams.get('tab') || 'overview').toLowerCase();
+    if (t === tab) return;
+    if (t === 'builder' || t === 'analytics' || t === 'overview') setTab(t);
+  }, [searchParams, tab]);
+
+  useEffect(() => {
     const loadCourses = async () => {
       try {
-        const res = await fetch('/api/questions');
-        const data = await res.json();
-        const questions = data.questions || [];
-        
-        // Mock grouping into a course for the demo
+        const [qRes, sRes] = await Promise.all([
+          fetch('/api/questions'),
+          fetch('/api/submissions?limit=200')
+        ]);
+
+        const qJson = await qRes.json().catch(() => ({}));
+        const sJson = await sRes.json().catch(() => ([]));
+
+        const questions = Array.isArray(qJson?.questions) ? qJson.questions : [];
+        const submissions = Array.isArray(sJson) ? sJson : [];
+
+        const counts = {};
+        const students = new Set();
+        let scoreSum = 0;
+        let scoreN = 0;
+
+        for (const s of submissions) {
+          const qid = Number(s?.question_id);
+          if (qid) counts[qid] = (counts[qid] || 0) + 1;
+          if (s?.student_id != null) students.add(String(s.student_id));
+          const ts = Number(s?.total_score);
+          if (Number.isFinite(ts)) {
+            scoreSum += ts;
+            scoreN += 1;
+          }
+        }
+
+        setSubmissionCounts(counts);
+
         setCourses([{
           id: 1,
           title: "Modern Frontend Fundamentals",
-          questions: questions,
-          studentCount: 42,
-          avgScore: 84
+          questions,
+          studentCount: students.size,
+          avgScore: scoreN ? Math.round(scoreSum / scoreN) : null
         }]);
       } catch (e) {
         console.error(e);
@@ -34,6 +70,27 @@ export default function TeacherDashboard() {
     loadCourses();
   }, []);
 
+  const deleteQuestion = async (qid) => {
+    const id = Number(qid);
+    if (!id) return;
+    const ok = window.confirm(`Delete Question ${id}? This cannot be undone.`);
+    if (!ok) return;
+
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/questions/${id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Delete failed');
+      setCourses((prev) =>
+        prev.map((c) => ({ ...c, questions: (c.questions || []).filter((q) => Number(q.id) !== id) }))
+      );
+    } catch (e) {
+      alert(e?.message || 'Failed to delete question');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="space-y-8 pb-12">
       <header className="flex items-center justify-between">
@@ -43,15 +100,36 @@ export default function TeacherDashboard() {
         </div>
         <button 
           onClick={() => navigate('/teacher/editor')}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-sm transition-all hover:-translate-y-0.5"
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-sm transition-all hover:-translate-y-0.5"
         >
           <Plus size={20} /> Create Question
         </button>
       </header>
 
-      {loading ? (
+      <div className="flex flex-wrap gap-2 bg-white p-2 rounded-2xl border border-gray-100 shadow-sm w-fit">
+        <button
+          onClick={() => { setTab('overview'); setSearchParams({ tab: 'overview' }); }}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 ${tab === 'overview' ? 'bg-emerald-50 text-emerald-700' : 'text-gray-600 hover:bg-gray-50'}`}
+        >
+          <BookOpen size={16} /> Overview
+        </button>
+        <button
+          onClick={() => { setTab('builder'); setSearchParams({ tab: 'builder' }); }}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 ${tab === 'builder' ? 'bg-emerald-50 text-emerald-700' : 'text-gray-600 hover:bg-gray-50'}`}
+        >
+          <Wrench size={16} /> Spec Builder
+        </button>
+        <button
+          onClick={() => { setTab('analytics'); setSearchParams({ tab: 'analytics' }); }}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 ${tab === 'analytics' ? 'bg-emerald-50 text-emerald-700' : 'text-gray-600 hover:bg-gray-50'}`}
+        >
+          <BarChart3 size={16} /> Analytics
+        </button>
+      </div>
+
+      {tab === 'overview' && (loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
         </div>
       ) : (
         <div className="grid gap-8">
@@ -59,16 +137,23 @@ export default function TeacherDashboard() {
             <section key={course.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center">
+                  <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
                     <BookOpen size={24} />
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-gray-900">{course.title}</h2>
-                    <p className="text-sm text-gray-500 font-medium">{course.questions.length} Questions • {course.studentCount} Students Enrolled</p>
+                    <p className="text-sm text-gray-500 font-medium">
+                      {course.questions.length} Questions • {course.studentCount} Students Enrolled • Avg Score: {course.avgScore ?? '--'}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                   <button className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-all">
+                   <button
+                     className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-white rounded-lg transition-all"
+                     onClick={() => navigate('/settings')}
+                     title="Course settings"
+                     aria-label="Course settings"
+                   >
                      <Settings2 size={20} />
                    </button>
                 </div>
@@ -110,17 +195,22 @@ export default function TeacherDashboard() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <span className="text-sm font-bold text-gray-600">--</span>
+                          <span className="text-sm font-bold text-gray-600">{submissionCounts[Number(q.id)] ?? 0}</span>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-2">
                              <button 
                                onClick={() => navigate(`/teacher/editor/${q.id}`)}
-                               className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"
+                               className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"
                              >
                                <Edit3 size={18} />
                              </button>
-                             <button className="p-2 text-gray-400 hover:text-red-600 hover:bg-white hover:shadow-sm rounded-lg transition-all">
+                             <button
+                               onClick={() => deleteQuestion(q.id)}
+                               disabled={deletingId === Number(q.id)}
+                               className="p-2 text-gray-400 hover:text-red-600 hover:bg-white hover:shadow-sm rounded-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                               title="Delete question"
+                             >
                                <Trash2 size={18} />
                              </button>
                           </div>
@@ -132,14 +222,27 @@ export default function TeacherDashboard() {
               </div>
               
               <div className="p-4 bg-gray-50/30 border-t border-gray-50">
-                <button className="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:border-indigo-300 hover:text-indigo-500 font-bold transition-all flex items-center justify-center gap-2">
+                <button
+                  className="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:border-emerald-300 hover:text-emerald-500 font-bold transition-all flex items-center justify-center gap-2"
+                  onClick={() => navigate('/teacher/editor')}
+                  title="Create a new question"
+                >
                   <Plus size={18} /> Add Module to Course
                 </button>
               </div>
             </section>
           ))}
         </div>
+      ))}
+
+      {tab === 'builder' && (
+        <TrainerPanel embedded initialTab="builder" />
+      )}
+
+      {tab === 'analytics' && (
+        <TrainerPanel embedded initialTab="analytics" />
       )}
     </div>
   );
 }
+

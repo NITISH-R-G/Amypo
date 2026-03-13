@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Download } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, RefreshCw } from 'lucide-react';
 import ScoreGauge from '../components/results/ScoreGauge';
 import AIFeedbackCard from '../components/results/AIFeedbackCard';
 import FailedTestsTable from '../components/results/FailedTestsTable';
@@ -12,6 +12,27 @@ export default function EvaluationResults() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [progressStage, setProgressStage] = useState(null);
+  const [activeRunId, setActiveRunId] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [replayBusy, setReplayBusy] = useState(false);
+  const [userId] = useState(() => window.localStorage.getItem('amypo_user_id') || '1');
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadUser = async () => {
+      try {
+        const res = await fetch(`/api/users/${encodeURIComponent(String(userId))}`);
+        const data = await res.json();
+        if (!cancelled) setIsAdmin(String(data?.role || '').toLowerCase() === 'admin');
+      } catch (_) {
+        if (!cancelled) setIsAdmin(false);
+      }
+    };
+    loadUser();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   useEffect(() => {
     let intervalId = null;
@@ -57,7 +78,8 @@ export default function EvaluationResults() {
           return;
         }
 
-        const res = await fetch(`http://localhost:4000/api/submissions/${id}/result`);
+        const qs = activeRunId ? `?run_id=${encodeURIComponent(String(activeRunId))}` : '';
+        const res = await fetch(`/api/submissions/${id}/result${qs}`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to fetch evaluation result');
 
@@ -84,7 +106,7 @@ export default function EvaluationResults() {
     // Optional: stream progress stages while polling for final artifacts.
     if (id !== 'demo-123') {
       try {
-        eventSource = new EventSource(`http://localhost:4000/api/submissions/${id}/progress`);
+        eventSource = new EventSource(`/api/submissions/${id}/progress`);
         eventSource.onmessage = (e) => {
           try {
             const msg = JSON.parse(e.data);
@@ -100,10 +122,38 @@ export default function EvaluationResults() {
     }
 
     return () => stop();
-  }, [id]);
+  }, [id, activeRunId]);
+
+  const replayEvaluation = async () => {
+    if (!id || id === 'demo-123') return;
+    setReplayBusy(true);
+    setError(null);
+    setLoading(true);
+    setResult(null);
+    setProgressStage('Packaging submission');
+
+    try {
+      const res = await fetch(`/api/submissions/${id}/replay`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': String(userId),
+          'x-user-role': 'admin'
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to replay evaluation');
+      setActiveRunId(data.run_id || null);
+    } catch (e) {
+      setError(e.message);
+      setLoading(false);
+    } finally {
+      setReplayBusy(false);
+    }
+  };
 
   if (loading) {
-    return <div className="h-full flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>;
+    return <div className="h-full flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div></div>;
   }
 
   if (error || !result) {
@@ -111,7 +161,7 @@ export default function EvaluationResults() {
       <div className="h-full flex flex-col items-center justify-center gap-4 text-center">
         <h2 className="text-2xl font-bold text-gray-900">Evaluation Error</h2>
         <p className="text-gray-500">{error || "Could not load evaluation report."}</p>
-        <Link to="/student" className="px-6 py-2 bg-indigo-600 text-white rounded-lg">Return to Workspace</Link>
+        <Link to="/student" className="px-6 py-2 bg-emerald-600 text-white rounded-lg">Return to Workspace</Link>
       </div>
     );
   }
@@ -120,9 +170,23 @@ export default function EvaluationResults() {
   const totalScore =
     result.total_score ?? (scores.html + scores.css + scores.js + scores.visual);
   const visual = result.visualArtifacts || null;
-  const mismatchPercent = Number(result.mismatchPercent || 0);
+  const mismatchPercent = Number(result.mismatchPercentage ?? result.mismatchPercent ?? 0);
   const failedTests = result.failedTests || [];
   const aiFeedback = result.aiFeedback || { summary: "No AI feedback generated.", suggestions: [] };
+
+  const visualTests = Array.isArray(result.visualTests) ? result.visualTests : [];
+  const viewportsToRender = visualTests.length > 0
+    ? visualTests
+    : (visual
+        ? [{
+            viewport: 'desktop',
+            expected: visual.expected || '',
+            actual: visual.actual || '',
+            diff: visual.diff || '',
+            diffPercent: mismatchPercent,
+            boxes: visual.boxes || []
+          }]
+        : []);
 
   return (
     <div className="max-w-6xl mx-auto h-full flex flex-col gap-6 pb-12">
@@ -131,7 +195,7 @@ export default function EvaluationResults() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Link to="/student" className="text-gray-400 hover:text-indigo-600 transition-colors">
+            <Link to="/student" className="text-gray-400 hover:text-emerald-600 transition-colors">
               <ArrowLeft size={20} />
             </Link>
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Evaluation Report</h1>
@@ -139,16 +203,35 @@ export default function EvaluationResults() {
           <p className="text-sm text-gray-500 font-mono ml-7">ID: {result.submission_id}</p>
           {(result.status === 'running' || result.status === 'pending') && (
             <p className="text-xs text-gray-500 ml-7 mt-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-indigo-500 animate-pulse mr-2" />
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-2" />
               {progressStage ? `Stage: ${progressStage}` : 'Evaluating...'}
             </p>
           )}
         </div>
         <div className="flex gap-3 w-full sm:w-auto ml-7 sm:ml-0">
-          <button className="flex-1 sm:flex-none justify-center items-center gap-2 px-4 py-2 bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm font-semibold transition-colors flex">
+          <button
+            onClick={() => {
+              const runId = result?.run_id;
+              if (!id || !runId) return;
+              const url = `/api/submissions/${encodeURIComponent(String(id))}/artifacts/report.pdf?run_id=${encodeURIComponent(String(runId))}`;
+              window.open(url, '_blank', 'noopener,noreferrer');
+            }}
+            className="flex-1 sm:flex-none justify-center items-center gap-2 px-4 py-2 bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm font-semibold transition-colors flex"
+            title="Open evaluation PDF report"
+          >
             <Download size={16} /> Export PDF
           </button>
-          <Link to="/student" className="flex-1 sm:flex-none justify-center items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-all shadow-sm shadow-indigo-600/20 flex">
+          {isAdmin && id && id !== 'demo-123' && (
+            <button
+              onClick={replayEvaluation}
+              disabled={replayBusy}
+              className="flex-1 sm:flex-none justify-center items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-colors flex"
+              title="Replay evaluation for this submission"
+            >
+              <RefreshCw size={16} className={replayBusy ? 'animate-spin' : ''} /> Replay Evaluation
+            </button>
+          )}
+          <Link to="/student" className="flex-1 sm:flex-none justify-center items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-all shadow-sm shadow-emerald-600/20 flex">
             Next Challenge <ArrowRight size={16} />
           </Link>
         </div>
@@ -208,13 +291,42 @@ export default function EvaluationResults() {
         {/* Right Column: Diff & Tests */}
         <div className="lg:col-span-8 flex flex-col gap-6">
            
-           <DiffViewer 
-             expectedUrl={visual?.expected || ''}
-             actualUrl={visual?.actual || ''}
-             diffUrl={visual?.diff || ''}
-             mismatchPercentage={mismatchPercent}
-             boxes={visual?.boxes || []}
-           />
+           {viewportsToRender.length === 0 ? (
+             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center text-gray-500">
+               Evaluation artifacts not generated yet.
+             </div>
+           ) : (
+             viewportsToRender.map((vt) => {
+               const mismatch = Number(vt?.diffPercent ?? vt?.diffPercentage ?? mismatchPercent ?? 0);
+               const boxes = vt?.boxes || vt?.hotspots || [];
+
+               return (
+                 <div key={vt?.viewport || 'viewport'} className="flex flex-col gap-3">
+                   <div className="flex items-center justify-between px-1">
+                     <div className="text-xs font-black uppercase tracking-widest text-gray-400">
+                       Viewport: <span className="text-gray-700">{vt?.viewport || 'default'}</span>
+                     </div>
+                     <div className="text-xs font-mono text-gray-500">
+                       Mismatch: {Number.isFinite(mismatch) ? mismatch.toFixed(2) : '0.00'}%
+                     </div>
+                   </div>
+                   <DiffViewer
+                     expectedUrl={vt?.expected || ''}
+                     actualUrl={vt?.actual || ''}
+                     diffUrl={vt?.diff || ''}
+                     expectedRenderUrl={vt?.expectedRenderUrl || ''}
+                     actualRenderUrl={vt?.actualRenderUrl || ''}
+                     mismatchPercentage={mismatch}
+                     boxes={Array.isArray(boxes) ? boxes : []}
+                     comparisonWidth={Number(vt?.comparisonWidth ?? 0)}
+                     comparisonHeight={Number(vt?.comparisonHeight ?? 0)}
+                     viewportWidth={Number(vt?.viewportWidth ?? 0)}
+                     viewportHeight={Number(vt?.viewportHeight ?? 0)}
+                   />
+                 </div>
+               );
+             })
+           )}
 
            <FailedTestsTable failedTests={failedTests} />
 
@@ -225,3 +337,4 @@ export default function EvaluationResults() {
     </div>
   );
 }
+

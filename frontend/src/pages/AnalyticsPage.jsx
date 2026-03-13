@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
 import { BarChart3 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:4000/api';
+const API_BASE = '/api';
+
+async function readJsonSafely(res) {
+  const text = await res.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch (_) {
+    throw new Error(res.ok ? 'Invalid server response' : text || 'Server error');
+  }
+}
 
 export default function AnalyticsPage() {
   const [data, setData] = useState(null);
@@ -18,7 +28,7 @@ export default function AnalyticsPage() {
       setError(null);
       try {
         const res = await fetch(`${API_BASE}/trainer/analytics/questions/${questionId}`);
-        const json = await res.json();
+        const json = await readJsonSafely(res);
         if (!res.ok) throw new Error(json.error || 'Failed to load analytics');
         if (!cancelled) setData(json);
       } catch (e) {
@@ -38,7 +48,7 @@ export default function AnalyticsPage() {
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            <BarChart3 className="text-indigo-600" /> Analytics
+            <BarChart3 className="text-emerald-600" /> Analytics
           </h1>
           <p className="text-sm text-gray-500 mt-1">Cohort-level insights for Question {questionId}.</p>
         </div>
@@ -61,7 +71,7 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
               <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Avg Score</div>
-              <div className="mt-2 text-3xl font-black text-indigo-600">{data.avgScore ?? 0}</div>
+              <div className="mt-2 text-3xl font-black text-emerald-600">{data.avgScore ?? 0}</div>
             </div>
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
               <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Avg Exec (ms)</div>
@@ -86,7 +96,7 @@ export default function AnalyticsPage() {
               {(data.scoreHistogram || [0, 0, 0, 0, 0]).map((v, idx) => (
                 <div key={idx} className="flex flex-col items-center gap-2">
                   <div
-                    className="w-full rounded-lg bg-indigo-200"
+                    className="w-full rounded-lg bg-emerald-200"
                     style={{ height: `${Math.max(8, Math.min(100, v * 2))}%` }}
                     title={String(v)}
                   />
@@ -118,4 +128,5 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+
 

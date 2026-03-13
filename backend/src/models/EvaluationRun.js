@@ -10,12 +10,14 @@ const EvaluationRun = sequelize.define('EvaluationRun', {
   submission_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    unique: true // 1:1 with Submission execution
+    // NOTE: Not unique. FR-8 requires replaying evaluation on the same submission,
+    // which creates additional EvaluationRun rows for the same submission_id.
   },
   html_score: { type: DataTypes.FLOAT, defaultValue: 0 },
   css_score: { type: DataTypes.FLOAT, defaultValue: 0 },
   js_score: { type: DataTypes.FLOAT, defaultValue: 0 },
   visual_score: { type: DataTypes.FLOAT, defaultValue: 0 },
+  quality_score: { type: DataTypes.FLOAT, defaultValue: 0 },
   console_errors: {
     type: DataTypes.JSONB,
     defaultValue: [] 

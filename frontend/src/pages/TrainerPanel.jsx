@@ -31,8 +31,8 @@ function parseExpectedValue(input) {
   return v;
 }
 
-export default function TrainerPanel() {
-  const [activeTab, setActiveTab] = useState('builder');
+export default function TrainerPanel({ initialTab = 'builder', embedded = false } = {}) {
+  const [activeTab, setActiveTab] = useState(() => (initialTab || 'builder'));
   const { toast } = useToast();
 
   const [questions, setQuestions] = useState([]);
@@ -46,6 +46,7 @@ export default function TrainerPanel() {
 
   const [draftLoading, setDraftLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [baselineBusy, setBaselineBusy] = useState(false);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -55,6 +56,11 @@ export default function TrainerPanel() {
   const [starterJs, setStarterJs] = useState('');
   const [showStarterEditor, setShowStarterEditor] = useState(false);
   const [showSpecJson, setShowSpecJson] = useState(false);
+
+  useEffect(() => {
+    if (!initialTab) return;
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   const [specBase, setSpecBase] = useState({ version: '1.0', viewports: DEFAULT_VIEWPORTS, tests: { dom: [], css: [], interactions: [] } });
   const nextTestIdRef = useRef(3);
@@ -111,6 +117,24 @@ export default function TrainerPanel() {
 
     return { ...base, version: base.version || '1.0', viewports, tests: nextTests };
   }, [specBase, tests]);
+
+  const generateBaseline = async () => {
+    if (!selectedQuestionId) return;
+    setBaselineBusy(true);
+    try {
+      const res = await fetch(`/api/questions/${selectedQuestionId}/baseline`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Baseline generation failed');
+      toast({
+        title: 'Baseline Queued',
+        description: `Question ${data.question_id} baseline v${data.version} queued (job: ${data.job_id || 'n/a'}).`
+      });
+    } catch (e) {
+      toast({ title: 'Baseline Failed', description: e?.message || 'Could not queue baseline.', variant: 'destructive' });
+    } finally {
+      setBaselineBusy(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -327,21 +351,33 @@ export default function TrainerPanel() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto h-full flex flex-col gap-6 pb-12">
+    <div className={embedded ? "w-full flex flex-col gap-6" : "max-w-7xl mx-auto h-full flex flex-col gap-6 pb-12"}>
       
       {/* Header & Tabs */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Trainer Dashboard</h1>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{embedded ? 'Teacher Tools' : 'Trainer Dashboard'}</h1>
           <p className="text-sm text-gray-500 mt-1">Manage assessment questions, test specs, and analyze cohort performance.</p>
         </div>
+
+        {activeTab === 'builder' && (
+          <button
+            onClick={generateBaseline}
+            disabled={baselineBusy || !selectedQuestionId}
+            className="px-4 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            title="Generate baseline screenshots from the reference solution (FR-2)"
+          >
+            {baselineBusy ? <Loader2 size={16} className="animate-spin" /> : <Box size={16} />}
+            Generate Baseline
+          </button>
+        )}
         
         <div className="flex bg-gray-100/80 p-1.5 rounded-xl border border-gray-200/60">
           <button 
             onClick={() => setActiveTab('builder')}
             className={cn(
               "px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2",
-              activeTab === 'builder' ? "bg-white text-indigo-700 shadow-sm" : "text-gray-600 hover:text-gray-900"
+              activeTab === 'builder' ? "bg-white text-emerald-700 shadow-sm" : "text-gray-600 hover:text-gray-900"
             )}
           >
             <Settings size={16} /> Content Builder
@@ -350,7 +386,7 @@ export default function TrainerPanel() {
             onClick={() => setActiveTab('analytics')}
             className={cn(
               "px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2",
-              activeTab === 'analytics' ? "bg-white text-indigo-700 shadow-sm" : "text-gray-600 hover:text-gray-900"
+              activeTab === 'analytics' ? "bg-white text-emerald-700 shadow-sm" : "text-gray-600 hover:text-gray-900"
             )}
           >
             <BarChart2 size={16} /> Cohort Analytics
@@ -371,7 +407,7 @@ export default function TrainerPanel() {
                     setShowAddQuestion(true);
                     setTimeout(() => addQuestionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 0);
                   }}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors"
                 >
                   <Plus size={14} /> Add
                 </button>
@@ -390,7 +426,7 @@ export default function TrainerPanel() {
                       className={cn(
                         "w-full text-left px-3 py-2 rounded-xl border transition-colors",
                         selectedQuestionId === q.id
-                          ? "border-indigo-200 bg-indigo-50 text-indigo-900"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-900"
                           : "border-gray-100 bg-white hover:bg-gray-50 text-gray-800"
                       )}
                     >
@@ -408,7 +444,7 @@ export default function TrainerPanel() {
                 className="w-full px-4 py-3 flex items-center justify-between text-sm font-semibold text-gray-800 hover:bg-gray-50 transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Plus size={16} className="text-indigo-600" />
+                  <Plus size={16} className="text-emerald-600" />
                   Add Question
                 </span>
                 {showAddQuestion ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
@@ -421,7 +457,7 @@ export default function TrainerPanel() {
                 <input
                   value={newQuestionTitle}
                   onChange={(e) => setNewQuestionTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400"
                   placeholder="e.g. Build a Pricing Card"
                 />
               </div>
@@ -431,7 +467,7 @@ export default function TrainerPanel() {
                   rows="2"
                   value={newQuestionDescription}
                   onChange={(e) => setNewQuestionDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 resize-none"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 resize-none"
                   placeholder="Short description…"
                 />
               </div>
@@ -439,8 +475,8 @@ export default function TrainerPanel() {
                 onClick={handleCreateQuestion}
                 disabled={creatingQuestion}
                 className={cn(
-                  "w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-sm transition-colors inline-flex items-center justify-center gap-2",
-                  creatingQuestion && "opacity-70 cursor-not-allowed hover:bg-indigo-600"
+                  "w-full bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-sm transition-colors inline-flex items-center justify-center gap-2",
+                  creatingQuestion && "opacity-70 cursor-not-allowed hover:bg-emerald-600"
                 )}
               >
                 {creatingQuestion ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
@@ -456,7 +492,7 @@ export default function TrainerPanel() {
            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
              <div className="bg-gray-50/50 px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <FileSignature size={18} className="text-indigo-600" />
+                  <FileSignature size={18} className="text-emerald-600" />
                   <h2 className="font-bold text-gray-900">Question Definition</h2>
                 </div>
                 <div className="text-xs text-gray-500 font-mono">
@@ -470,7 +506,7 @@ export default function TrainerPanel() {
                    type="text"
                    value={title}
                    onChange={(e) => setTitle(e.target.value)}
-                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
+                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all"
                    placeholder="Responsive Profile Card"
                  />
                </div>
@@ -478,7 +514,7 @@ export default function TrainerPanel() {
                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Markdown Description</label>
                  <textarea
                    rows="4"
-                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all resize-none"
+                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all resize-none"
                    value={description}
                    onChange={(e) => setDescription(e.target.value)}
                    placeholder="Build a profile card matching the design specs..."
@@ -515,8 +551,8 @@ export default function TrainerPanel() {
                     onClick={handleSaveDraft}
                     disabled={!selectedQuestionId || draftLoading || saving}
                     className={cn(
-                      "bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-semibold shadow-sm transition-colors inline-flex items-center gap-2",
-                      (!selectedQuestionId || draftLoading || saving) && "opacity-70 cursor-not-allowed hover:bg-indigo-600"
+                      "bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-semibold shadow-sm transition-colors inline-flex items-center gap-2",
+                      (!selectedQuestionId || draftLoading || saving) && "opacity-70 cursor-not-allowed hover:bg-emerald-600"
                     )}
                   >
                     {(draftLoading || saving) && <Loader2 size={16} className="animate-spin" />}
@@ -535,7 +571,7 @@ export default function TrainerPanel() {
                 </div>
                 <button
                   onClick={addTest}
-                  className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors"
+                  className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors"
                 >
                   <Plus size={14} /> Add Assertion
                 </button>
@@ -572,7 +608,7 @@ export default function TrainerPanel() {
                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5">Target Selector</label>
                              <input
                                type="text"
-                               className="w-full text-sm border-gray-200 rounded-md font-mono text-indigo-600"
+                               className="w-full text-sm border-gray-200 rounded-md font-mono text-emerald-600"
                                value={test.target}
                                onChange={(e) => updateTest(test.id, { target: e.target.value })}
                              />
@@ -630,7 +666,7 @@ export default function TrainerPanel() {
                       </button>
                       {showSpecJson && (
                         <div className="bg-slate-900 rounded-xl p-4 overflow-auto max-h-[260px]">
-                          <pre className="text-xs text-indigo-300 font-mono">
+                          <pre className="text-xs text-emerald-300 font-mono">
  {JSON.stringify(specJson, null, 2)}
                           </pre>
                         </div>
@@ -650,7 +686,7 @@ export default function TrainerPanel() {
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center items-center">
                 <span className="text-gray-500 font-semibold text-sm uppercase tracking-wider mb-2">Avg. Score</span>
-                <span className="text-4xl font-black text-indigo-600">{analyticsData.avgScore}<span className="text-xl text-indigo-300 ml-1">%</span></span>
+                <span className="text-4xl font-black text-emerald-600">{analyticsData.avgScore}<span className="text-xl text-emerald-300 ml-1">%</span></span>
               </div>
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center items-center">
                 <span className="text-gray-500 font-semibold text-sm uppercase tracking-wider mb-2">Pass Rate</span>
@@ -662,7 +698,7 @@ export default function TrainerPanel() {
               </div>
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center items-center">
                 <span className="text-gray-500 font-semibold text-sm uppercase tracking-wider mb-2">Avg Performance</span>
-                <span className="text-4xl font-black text-purple-600">{analyticsData.avgExecution}</span>
+                <span className="text-4xl font-black text-emerald-600">{analyticsData.avgExecution}</span>
               </div>
            </div>
 
@@ -678,7 +714,7 @@ export default function TrainerPanel() {
                       datasets: [{
                         label: 'Students',
                         data: analyticsData.scoreHistogram,
-                        backgroundColor: '#6366f1',
+                        backgroundColor: '#10b981',
                         borderRadius: 6,
                         borderSkipped: false,
                       }]
@@ -701,7 +737,7 @@ export default function TrainerPanel() {
              {/* Diagnostics List */}
              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
                 <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-                  <Users size={18} className="text-indigo-600"/> Common Stumbling Blocks
+                  <Users size={18} className="text-emerald-600"/> Common Stumbling Blocks
                 </h3>
                 <div className="flex-1 overflow-y-auto pr-2">
                   <ul className="space-y-3">
@@ -726,3 +762,4 @@ export default function TrainerPanel() {
     </div>
   );
 }
+

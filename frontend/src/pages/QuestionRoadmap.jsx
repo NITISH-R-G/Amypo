@@ -11,17 +11,46 @@ export default function QuestionRoadmap() {
   useEffect(() => {
     const loadRoadmap = async () => {
       try {
-        const res = await fetch('/api/questions');
-        const data = await res.json();
-        const questions = data.questions || [];
-        
-        // Mocking a course structure with completed status based on ID
+        // Demo/student pages currently use student_id=1. If you add auth later, replace this.
+        const studentId = 1;
+
+        const [qRes, sRes] = await Promise.all([
+          fetch('/api/questions'),
+          fetch(`/api/submissions?student_id=${studentId}&limit=200`)
+        ]);
+
+        const qData = await qRes.json().catch(() => ({}));
+        const sData = await sRes.json().catch(() => ([]));
+        const questions = Array.isArray(qData.questions) ? qData.questions : [];
+        const submissions = Array.isArray(sData) ? sData : (Array.isArray(sData.items) ? sData.items : []);
+
+        // Completed if there is at least one completed submission for that question.
+        const completedQuestionIds = new Set(
+          submissions
+            .filter((s) => String(s?.status || '') === 'completed')
+            .map((s) => Number(s?.question_id))
+            .filter(Boolean)
+        );
+
+        // Determine current: first question (by order) not completed.
+        const ordered = [...questions].sort((a, b) => Number(a?.id || 0) - Number(b?.id || 0));
+        const currentIdx = Math.max(
+          0,
+          ordered.findIndex((q) => !completedQuestionIds.has(Number(q?.id)))
+        );
+
         setCourse({
-          title: "Modern Frontend Fundamentals",
-          questions: questions.map((q, i) => ({
-            ...q,
-            status: i === 0 ? 'completed' : i === 1 ? 'current' : 'locked'
-          }))
+          title: 'Modern Frontend Fundamentals',
+          questions: ordered.map((q, idx) => {
+            const id = Number(q?.id);
+            const done = completedQuestionIds.has(id);
+            const isCurrent = !done && idx === currentIdx;
+            const unlocked = done || idx <= currentIdx;
+            return {
+              ...q,
+              status: done ? 'completed' : isCurrent ? 'current' : unlocked ? 'unlocked' : 'locked'
+            };
+          })
         });
       } catch (e) {
         console.error(e);
@@ -50,7 +79,7 @@ export default function QuestionRoadmap() {
   return (
     <div className="max-w-4xl mx-auto py-12 px-6">
       <header className="mb-12 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-600 font-bold text-sm mb-4">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-600 font-bold text-sm mb-4">
           <GraduationCap size={18} /> Learning Path
         </div>
         <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-4">{course?.title}</h1>
@@ -70,12 +99,14 @@ export default function QuestionRoadmap() {
                   whileHover={{ scale: 1.1 }}
                   className={`w-20 h-20 rounded-3xl flex items-center justify-center shadow-lg transition-all duration-300 ${
                     q.status === 'completed' ? 'bg-emerald-500 text-white shadow-emerald-200' :
-                    q.status === 'current' ? 'bg-indigo-600 text-white shadow-indigo-200 animate-pulse' :
+                    q.status === 'current' ? 'bg-emerald-600 text-white shadow-emerald-200 animate-pulse' :
+                    q.status === 'unlocked' ? 'bg-white border-2 border-emerald-100 text-emerald-500 shadow-emerald-100' :
                     'bg-white border-2 border-gray-100 text-gray-300'
                   }`}
                 >
                   {q.status === 'completed' ? <CheckCircle2 size={32} /> :
                    q.status === 'current' ? <Play size={32} /> :
+                   q.status === 'unlocked' ? <Unlock size={32} /> :
                    <Lock size={32} />}
                 </motion.div>
                 {/* Step Indicator */}
@@ -86,16 +117,16 @@ export default function QuestionRoadmap() {
 
               {/* Content Card */}
               <button 
-                onClick={() => q.status !== 'locked' && navigate(`/student?questionId=${q.id}`)}
+                onClick={() => q.status !== 'locked' && navigate(`/student?question=${encodeURIComponent(String(q.id))}`)}
                 disabled={q.status === 'locked'}
                 className={`flex-1 text-left p-6 rounded-3xl border transition-all duration-300 ${
                   q.status === 'locked' ? 'bg-gray-50/50 border-gray-100 opacity-60' :
-                  'bg-white border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-200 group-hover:-translate-x-1'
+                  'bg-white border-gray-100 shadow-sm hover:shadow-md hover:border-emerald-200 group-hover:-translate-x-1'
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <h3 className={`text-xl font-bold ${q.status === 'locked' ? 'text-gray-400' : 'text-gray-900'}`}>{q.title}</h3>
-                  <ChevronRight size={20} className={q.status === 'locked' ? 'text-gray-300' : 'text-indigo-400'} />
+                  <ChevronRight size={20} className={q.status === 'locked' ? 'text-gray-300' : 'text-emerald-400'} />
                 </div>
                 <p className="text-gray-500 text-sm line-clamp-2 mb-4 leading-relaxed font-medium">
                   {q.description || "Master this module to unlock the next challenge in your curriculum."}
@@ -107,7 +138,7 @@ export default function QuestionRoadmap() {
                     15 mins
                   </div>
                   {q.status === 'current' && (
-                    <span className="text-xs font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded">Active</span>
+                    <span className="text-xs font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded">Active</span>
                   )}
                 </div>
               </button>
@@ -118,3 +149,4 @@ export default function QuestionRoadmap() {
     </div>
   );
 }
+

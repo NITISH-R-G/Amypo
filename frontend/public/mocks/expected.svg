@@ -13,7 +13,7 @@
   
   <!-- Card Content -->
   <text x="240" y="110" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700" fill="#1e293b">Pro Plan</text>
-  <text x="240" y="150" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="800" fill="#4f46e5">$29<tspan font-size="16" font-weight="500" fill="#64748b">/mo</tspan></text>
+  <text x="240" y="150" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="800" fill="#059669">$29<tspan font-size="16" font-weight="500" fill="#64748b">/mo</tspan></text>
   
   <!-- Expected: Flexbox row aligned features -->
   <g font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" fill="#475569">
@@ -22,6 +22,7 @@
   </g>
   
   <!-- ExpectedButton -->
-  <rect x="240" y="240" width="320" height="48" rx="8" fill="#4f46e5" />
+  <rect x="240" y="240" width="320" height="48" rx="8" fill="#059669" />
   <text x="400" y="269" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="600" fill="#ffffff" text-anchor="middle">Subscribe Now</text>
 </svg>
+

@@ -15,12 +15,26 @@ async function generateVisualDiff(expectedPath, actualPath, diffPath) {
   const img1 = PNG.sync.read(fs.readFileSync(expectedPath));
   const img2 = PNG.sync.read(fs.readFileSync(actualPath));
   
-  const { width, height } = img1;
+  // pixelmatch requires identical dimensions. In practice screenshots should match,
+  // but we normalize to avoid hard failures (e.g., different fullPage heights).
+  const width = Math.max(img1.width, img2.width);
+  const height = Math.max(img1.height, img2.height);
+
+  const normalize = (img) => {
+    if (img.width === width && img.height === height) return img;
+    const out = new PNG({ width, height });
+    // Default data is zeroed; copy the original into top-left.
+    PNG.bitblt(img, out, 0, 0, img.width, img.height, 0, 0);
+    return out;
+  };
+
+  const n1 = normalize(img1);
+  const n2 = normalize(img2);
   const diff = new PNG({ width, height });
 
   const numDiffPixels = pixelmatch(
-    img1.data, 
-    img2.data, 
+    n1.data,
+    n2.data,
     diff.data, 
     width, 
     height, 

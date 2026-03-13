@@ -8,7 +8,7 @@ export default function LandingPage() {
       
       {/* Hero Section */}
       <div className="text-center max-w-3xl px-4 py-16">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 font-semibold mb-6">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 font-semibold mb-6">
           <Sparkles size={16} /> <span className="text-sm">V2.0 is Live &mdash; Smarter Assessments</span>
         </div>
         
@@ -24,7 +24,7 @@ export default function LandingPage() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Link 
             to="/student"
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-xl font-bold shadow-sm shadow-indigo-600/20 transition-all hover:-translate-y-0.5"
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-xl font-bold shadow-sm shadow-emerald-600/20 transition-all hover:-translate-y-0.5"
           >
             Start Practice Workspace <ArrowRight size={18} />
           </Link>
@@ -60,7 +60,7 @@ export default function LandingPage() {
         </div>
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-          <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-4">
+          <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
             <Bot size={24} />
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">AI Diagnostic Hints</h3>
@@ -73,3 +73,4 @@ export default function LandingPage() {
     </div>
   );
 }
+

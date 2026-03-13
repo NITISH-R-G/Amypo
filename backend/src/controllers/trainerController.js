@@ -42,8 +42,11 @@ const getQuestionAnalytics = async (req, res) => {
       else if (score <= 60) scoreHistogram[2]++;
       else if (score <= 80) scoreHistogram[3]++;
       else scoreHistogram[4]++;
+      const runs = Array.isArray(sub.EvaluationRuns) ? sub.EvaluationRuns : [];
+      const run = runs.length > 0
+        ? runs.slice().sort((a, b) => Number(b.id || 0) - Number(a.id || 0))[0]
+        : null;
 
-      const run = sub.EvaluationRun;
       if (run) {
         // Compute failed test frequencies
         if (run.failed_tests && Array.isArray(run.failed_tests)) {
@@ -66,7 +69,7 @@ const getQuestionAnalytics = async (req, res) => {
 
         // Execution average
         if (run.execution_timings && run.execution_timings.puppeteer_eval) {
-          const msStr = run.execution_timings.puppeteer_eval.replace('ms', '');
+          const msStr = String(run.execution_timings.puppeteer_eval).replace('ms', '');
           const ms = parseInt(msStr, 10);
           if (!isNaN(ms)) {
             executionTotalMs += ms;

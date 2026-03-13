@@ -42,7 +42,7 @@ export default function FailedTestsTable({ failedTests = [] }) {
                   </div>
                 </td>
                 <td className="px-5 py-4">
-                  <code className="text-sm text-indigo-600 font-medium">
+                  <code className="text-sm text-emerald-600 font-medium">
                     {test.selector || 'N/A'}
                   </code>
                 </td>
@@ -60,3 +60,4 @@ export default function FailedTestsTable({ failedTests = [] }) {
     </div>
   );
 }
+

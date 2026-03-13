@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { RefreshCw, ExternalLink } from 'lucide-react';
 import { cn } from '../utils/utils';
 
-const API_BASE = 'http://localhost:4000/api';
+const API_BASE = '/api';
 
 function formatDate(iso) {
   try {
@@ -14,6 +14,8 @@ function formatDate(iso) {
 }
 
 export default function SubmissionsPage() {
+  const [searchParams] = useSearchParams();
+  const q = String(searchParams.get('q') || '').trim().toLowerCase();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -54,6 +56,16 @@ export default function SubmissionsPage() {
     return { total, byStatus };
   }, [items]);
 
+  const filteredItems = useMemo(() => {
+    if (!q) return items;
+    return items.filter((s) => {
+      const id = String(s?.id || '');
+      const status = String(s?.status || '').toLowerCase();
+      const title = String(s?.Question?.title || '').toLowerCase();
+      return id.includes(q) || status.includes(q) || title.includes(q);
+    });
+  }, [items, q]);
+
   return (
     <div className="max-w-7xl mx-auto h-full flex flex-col gap-6 pb-12">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
@@ -68,6 +80,12 @@ export default function SubmissionsPage() {
           <RefreshCw size={16} /> Refresh
         </button>
       </div>
+
+      {q && (
+        <div className="text-sm text-gray-600">
+          Showing results for <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">{q}</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
@@ -107,7 +125,7 @@ export default function SubmissionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((s) => (
+                {filteredItems.map((s) => (
                   <tr key={s.id} className="border-t border-gray-100 hover:bg-gray-50/60">
                     <td className="px-6 py-3 font-mono text-xs text-gray-700">{s.id}</td>
                     <td className="px-6 py-3">
@@ -115,7 +133,7 @@ export default function SubmissionsPage() {
                         className={cn(
                           'px-2 py-1 rounded-md text-xs font-bold',
                           s.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                          s.status === 'running' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' :
+                          s.status === 'running' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
                           s.status === 'pending' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
                           s.status === 'failed' ? 'bg-red-50 text-red-700 border border-red-100' :
                           'bg-gray-50 text-gray-700 border border-gray-100'
@@ -129,17 +147,19 @@ export default function SubmissionsPage() {
                     <td className="px-6 py-3 text-right">
                       <Link
                         to={`/results/${s.id}`}
-                        className="inline-flex items-center gap-2 text-indigo-700 hover:text-indigo-900 font-semibold"
+                        className="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-900 font-semibold"
                       >
                         View <ExternalLink size={14} />
                       </Link>
                     </td>
                   </tr>
                 ))}
-                {(!loading && items.length === 0) && (
+                {(!loading && filteredItems.length === 0) && (
                   <tr>
                     <td className="px-6 py-8 text-center text-gray-500" colSpan={5}>
-                      No submissions yet. Go to <Link to="/student" className="text-indigo-700 font-semibold">Practice Workspace</Link> and click Submit & Evaluate.
+                      {q
+                        ? 'No matching submissions.'
+                        : <>No submissions yet. Go to <Link to="/student" className="text-emerald-700 font-semibold">Practice Workspace</Link> and click Submit & Evaluate.</>}
                     </td>
                   </tr>
                 )}
@@ -151,4 +171,5 @@ export default function SubmissionsPage() {
     </div>
   );
 }
+
 

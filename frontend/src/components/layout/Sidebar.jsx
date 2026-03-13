@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, LayoutDashboard, Target, GraduationCap, BarChart3, Settings, Code, FileVideo, TerminalSquare, SlidersHorizontal, UserCircle, Bell, BookOpen } from 'lucide-react';
+import { Home, GraduationCap, BarChart3, Settings, FileVideo, TerminalSquare, SlidersHorizontal, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Sidebar({ isOpen, setIsOpen }) {
@@ -10,7 +10,6 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     { name: 'Practice Workspace', path: '/student', icon: <TerminalSquare size={20} /> },
     { name: 'My Submissions', path: '/submissions', icon: <FileVideo size={20} /> },
     { name: 'Analytics', path: '/analytics', icon: <BarChart3 size={20} /> },
-    { name: 'Trainer Panel', path: '/trainer', icon: <Target size={20} /> },
     { name: 'Admin Operations', path: '/admin', icon: <SlidersHorizontal size={20} /> },
   ];
 
@@ -23,15 +22,22 @@ export default function Sidebar({ isOpen, setIsOpen }) {
          <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100">
            {isOpen && (
              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-                 <div className="bg-indigo-600 p-1.5 rounded-lg text-white">
-                   <Code size={18} strokeWidth={3}/>
-                 </div>
-                 <span className="font-bold text-gray-900 tracking-tight text-lg">Assess<span className="text-indigo-600">Pro</span></span>
+                 <img
+                   src="/amypo-logo.svg"
+                   alt="Amypo"
+                   className="h-8 w-auto select-none"
+                   draggable="false"
+                 />
              </motion.div>
            )}
            {!isOpen && (
-             <div className="w-full flex justify-center text-indigo-600">
-               <Code size={24} strokeWidth={3}/>
+             <div className="w-full flex justify-center text-emerald-600">
+               <img
+                 src="/amypo-mark.svg"
+                 alt="Amypo"
+                 className="h-7 w-auto select-none"
+                 draggable="false"
+               />
              </div>
            )}
          </div>
@@ -47,7 +53,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                 className={({ isActive }) => 
                   `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative ${
                     isActive 
-                      ? 'bg-indigo-50 text-indigo-700 font-semibold' 
+                      ? 'bg-emerald-50 text-emerald-700 font-semibold' 
                       : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 font-medium'
                   } ${!isOpen && 'justify-center'}`
                 }
@@ -73,3 +79,4 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     </motion.aside>
   );
 }
+

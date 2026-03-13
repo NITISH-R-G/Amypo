@@ -38,8 +38,8 @@ Baseline.belongsTo(Question, { foreignKey: 'question_id' });
 Question.hasMany(Submission, { foreignKey: 'question_id', onDelete: 'CASCADE' });
 Submission.belongsTo(Question, { foreignKey: 'question_id' });
 
-// Submission 1:1 EvaluationRun
-Submission.hasOne(EvaluationRun, { foreignKey: 'submission_id', onDelete: 'CASCADE' });
+// Submission 1:N EvaluationRun (supports replaying evaluation on the same submission)
+Submission.hasMany(EvaluationRun, { foreignKey: 'submission_id', onDelete: 'CASCADE' });
 EvaluationRun.belongsTo(Submission, { foreignKey: 'submission_id' });
 
 // EvaluationRun 1:N Artifact (one per viewport + global ones)

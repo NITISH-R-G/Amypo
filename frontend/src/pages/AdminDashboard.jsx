@@ -3,7 +3,7 @@ import axios from 'axios';
 import { RefreshCw, Trash2, Plus, ShieldCheck, PlayCircle, X, Terminal, Globe, ServerCrash } from 'lucide-react';
 import { cn } from '../utils/utils';
 
-const API_BASE = 'http://localhost:4000/api/admin';
+const API_BASE = '/api/admin';
 
 export default function AdminDashboard() {
   const [whitelist, setWhitelist] = useState([]);
@@ -16,6 +16,8 @@ export default function AdminDashboard() {
   const [replayEvents, setReplayEvents] = useState([]);
 
   useEffect(() => {
+    // Demo auth: mark this session as admin so admin-only actions (like replay) are enabled.
+    try { window.localStorage.setItem('amypo_user_id', '2'); } catch (_) {}
     fetchWhitelist();
     fetchLogs();
   }, []);
@@ -23,7 +25,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     let eventSource;
     if (replayModalOpen && activeReplayId) {
-      eventSource = new EventSource(`http://localhost:4000/api/submissions/${activeReplayId}/progress`);
+      eventSource = new EventSource(`/api/submissions/${activeReplayId}/progress`);
       
       eventSource.onmessage = (e) => {
         const msg = JSON.parse(e.data);
@@ -100,7 +102,7 @@ export default function AdminDashboard() {
     <div className="max-w-7xl mx-auto h-full flex flex-col gap-6 pb-12 relative">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2"><ShieldCheck className="text-indigo-600" /> System Access & Ops</h1>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2"><ShieldCheck className="text-emerald-600" /> System Access & Ops</h1>
           <p className="text-sm text-gray-500 mt-1">Manage global library whitelists and actively monitor evaluation workers.</p>
         </div>
       </div>
@@ -118,12 +120,12 @@ export default function AdminDashboard() {
               <input 
                 type="text" 
                 placeholder="e.g., cdn.jsdelivr.net" 
-                className="flex-1 bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all text-sm font-mono"
+                className="flex-1 bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all text-sm font-mono"
                 value={newDomain} onChange={e => setNewDomain(e.target.value)}
               />
               <button 
                 onClick={addDomain} 
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
               >
                 <Plus size={16}/> Add
               </button>
@@ -163,10 +165,10 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="bg-gray-50/50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
             <div className="flex items-center gap-2">
-               <Terminal className="text-indigo-600" size={18} />
+               <Terminal className="text-emerald-600" size={18} />
                <h2 className="font-bold text-gray-900">Worker Evaluation Logs</h2>
             </div>
-            <button onClick={fetchLogs} className="text-gray-400 hover:text-indigo-600 transition-colors bg-white border border-gray-200 p-1.5 rounded-md shadow-sm">
+            <button onClick={fetchLogs} className="text-gray-400 hover:text-emerald-600 transition-colors bg-white border border-gray-200 p-1.5 rounded-md shadow-sm">
               <RefreshCw size={14}/>
             </button>
           </div>
@@ -175,13 +177,13 @@ export default function AdminDashboard() {
             {logs.length > 0 ? (
                <div className="space-y-3">
                  {logs.map(log => (
-                   <div key={log.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-3 group hover:border-indigo-300 transition-colors">
+                   <div key={log.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-3 group hover:border-emerald-300 transition-colors">
                      <div className="flex justify-between items-start">
                        <div>
                          <p className="font-bold text-xs text-gray-500 uppercase tracking-widest mb-1">Run Assignment</p>
-                         <p className="font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded text-sm inline-block">{log.id.substring(0,8)}</p>
+                         <p className="font-mono text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-sm inline-block">{String(log.id).slice(0, 8)}</p>
                        </div>
-                       <button onClick={() => replayEval(log.id)} className="bg-slate-900 text-white hover:bg-indigo-600 px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 opacity-0 group-hover:opacity-100">
+                       <button onClick={() => replayEval(log.id)} className="bg-slate-900 text-white hover:bg-emerald-600 px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 opacity-0 group-hover:opacity-100">
                          <PlayCircle size={14} /> Replay Task
                        </button>
                      </div>
@@ -189,7 +191,7 @@ export default function AdminDashboard() {
                         <span className="text-[10px] font-bold px-2 py-1 rounded bg-gray-100 text-gray-600">HTML: {log.html_score}</span>
                         <span className="text-[10px] font-bold px-2 py-1 rounded bg-gray-100 text-gray-600">CSS: {log.css_score}</span>
                         <span className="text-[10px] font-bold px-2 py-1 rounded bg-gray-100 text-gray-600">JS: {log.js_score}</span>
-                        <span className="text-[10px] font-bold px-2 py-1 rounded bg-amber-50 border border-amber-200 text-amber-700">VIS: {log.visual_score.toFixed(1)}</span>
+                        <span className="text-[10px] font-bold px-2 py-1 rounded bg-amber-50 border border-amber-200 text-amber-700">VIS: {Number(log.visual_score ?? 0).toFixed(1)}</span>
                      </div>
                    </div>
                  ))}
@@ -247,10 +249,10 @@ export default function AdminDashboard() {
                  </div>
                ))}
                
-               {replayEvents.length > 0 && replayEvents[replayEvents.length - 1].type !== 'success' && replayEvents[replayEvents.length - 1].type !== 'failed' && (
+               {replayEvents.length > 0 && replayEvents[replayEvents.length - 1].type !== 'success' && replayEvents[replayEvents.length - 1].type !== 'error' && (
                  <div className="flex gap-3 animate-pulse">
                    <span className="text-slate-500">{new Date().toLocaleTimeString()}</span>
-                   <span className="text-indigo-400">_</span>
+                   <span className="text-emerald-400">_</span>
                  </div>
                )}
             </div>
@@ -265,3 +267,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

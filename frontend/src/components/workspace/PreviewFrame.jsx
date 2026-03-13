@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { buildPreviewDocument } from './previewDocument';
 
 export default function PreviewFrame({ html, css, js }) {
   const iframeRef = useRef(null);
@@ -6,27 +7,7 @@ export default function PreviewFrame({ html, css, js }) {
   useEffect(() => {
     if (!iframeRef.current) return;
 
-    // Construct the live preview document
-    const content = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            ${css}
-          </style>
-        </head>
-        <body>
-          ${html}
-          <script>
-            try {
-              ${js}
-            } catch (error) {
-              console.error('Runtime Error:', error);
-            }
-          </script>
-        </body>
-      </html>
-    `;
+    const content = buildPreviewDocument({ html, css, js });
 
     const blob = new Blob([content], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
