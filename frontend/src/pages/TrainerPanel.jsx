@@ -17,6 +17,48 @@ const DEFAULT_VIEWPORTS = [
 
 const DEFAULT_STARTER_HTML = "<div class='card'>\n  <!-- Start styling here -->\n</div>";
 
+const DOM_ASSERTIONS = [
+  { value: 'exists', label: 'Exists' },
+  { value: 'count', label: 'Count Equals' },
+  { value: 'textIncludes', label: 'Text Includes' },
+  { value: 'textEquals', label: 'Text Equals' },
+  { value: 'hasClass', label: 'Has Class' },
+  { value: 'attributeEquals', label: 'Attribute Equals' },
+  { value: 'valueEquals', label: 'Input Value Equals' },
+  { value: 'alertCalled', label: 'Alert Called' },
+  { value: 'alertIncludes', label: 'Alert Includes Text' }
+];
+
+const INTERACTION_ACTIONS = [
+  { value: 'click', label: 'Click' },
+  { value: 'hover', label: 'Hover' },
+  { value: 'type', label: 'Type' },
+  { value: 'scroll', label: 'Scroll Into View' },
+  { value: 'keypress', label: 'Key Press' },
+  { value: 'focus', label: 'Focus' },
+  { value: 'select', label: 'Select Option' },
+  { value: 'check', label: 'Check' },
+  { value: 'uncheck', label: 'Uncheck' },
+  { value: 'wait', label: 'Wait' },
+  { value: 'waitForSelector', label: 'Wait For Selector' }
+];
+
+const assertionNeedsExpected = (assertion) => new Set([
+  'count',
+  'textIncludes',
+  'textEquals',
+  'hasClass',
+  'attributeEquals',
+  'valueEquals',
+  'alertIncludes'
+]).has(assertion);
+
+const assertionNeedsSelector = (assertion) => !new Set(['alertCalled', 'alertIncludes']).has(assertion);
+
+const actionNeedsSelector = (action) => !new Set(['keypress', 'wait']).has(action);
+const actionNeedsValue = (action) => new Set(['type', 'select', 'wait']).has(action);
+const actionNeedsKey = (action) => action === 'keypress';
+
 function parseExpectedValue(input) {
   if (typeof input !== 'string') return input;
   const v = input.trim();
@@ -66,9 +108,11 @@ export default function TrainerPanel({ initialTab = 'builder', embedded = false 
   const nextTestIdRef = useRef(3);
 
   const [tests, setTests] = useState([
-    { id: 1, type: 'dom', target: '.profile-card', assertion: 'exists', weight: 10 },
-    { id: 2, type: 'css', target: '.profile-card', property: 'display', value: 'flex', weight: 20 }
+    { id: 1, type: 'dom', target: '.card', assertion: 'exists', weight: 10 },
+    { id: 2, type: 'css', target: '.card', property: 'display', value: 'flex', weight: 20 }
   ]);
+  const [interactionSteps, setInteractionSteps] = useState([]);
+  const nextInteractionIdRef = useRef(1);
 
   const specJson = useMemo(() => {
     const base = specBase && typeof specBase === 'object' ? specBase : {};
@@ -94,29 +138,57 @@ export default function TrainerPanel({ initialTab = 'builder', embedded = false 
             ...raw,
             selector: t.target || '',
             property: t.property || '',
-            expected: parseExpectedValue(t.value ?? '')
+            expected: parseExpectedValue(t.value ?? ''),
+            matcher: raw.matcher || 'equals'
           });
         }
-      } else if (t.type === 'interaction') {
-        dom.push({
-          ...raw,
-          assertion: 'alertCalled'
-        });
       } else {
-        dom.push({
+        const nextDomTest = {
           ...raw,
-          selector: t.target || '',
           assertion: t.assertion || 'exists'
-        });
+        };
+
+        if (assertionNeedsSelector(t.assertion)) {
+          nextDomTest.selector = t.target || '';
+        } else {
+          delete nextDomTest.selector;
+        }
+
+        if (assertionNeedsExpected(t.assertion)) {
+          nextDomTest.expected = parseExpectedValue(t.value ?? '');
+        } else {
+          delete nextDomTest.expected;
+        }
+
+        if (t.assertion === 'attributeEquals') {
+          nextDomTest.attribute = t.attribute || '';
+        } else {
+          delete nextDomTest.attribute;
+        }
+
+        dom.push(nextDomTest);
       }
     });
 
     nextTests.dom = dom;
     nextTests.css = css;
-    if (!Array.isArray(nextTests.interactions)) nextTests.interactions = baseTests.interactions || [];
+    nextTests.interactions = interactionSteps.map((step) => {
+      const nextStep = {
+        action: step.action || 'click',
+        delay: Number(step.delay) >= 0 ? Number(step.delay) : 50
+      };
+
+      if (actionNeedsSelector(step.action)) nextStep.selector = step.selector || '';
+      if (actionNeedsValue(step.action)) nextStep.value = step.value ?? '';
+      if (actionNeedsKey(step.action)) nextStep.key = step.key || '';
+      if (step.waitForVisible && actionNeedsSelector(step.action)) nextStep.waitForVisible = true;
+      if (step.clear && step.action === 'type') nextStep.clear = true;
+
+      return nextStep;
+    });
 
     return { ...base, version: base.version || '1.0', viewports, tests: nextTests };
-  }, [specBase, tests]);
+  }, [interactionSteps, specBase, tests]);
 
   const generateBaseline = async () => {
     if (!selectedQuestionId) return;
@@ -192,21 +264,21 @@ export default function TrainerPanel({ initialTab = 'builder', embedded = false 
 
         const domSpec = Array.isArray(base?.tests?.dom) ? base.tests.dom : [];
         const cssSpec = Array.isArray(base?.tests?.css) ? base.tests.css : [];
+        const interactionSpec = Array.isArray(base?.tests?.interactions) ? base.tests.interactions : [];
 
         const mapped = [];
         domSpec.forEach((t, idx) => {
-          if (t?.assertion === 'alertCalled' && !t?.selector) {
-            mapped.push({ id: idx + 1, type: 'interaction', target: '', assertion: 'alertCalled', weight: 10, _raw: t });
-          } else {
-            mapped.push({
-              id: idx + 1,
-              type: 'dom',
-              target: t?.selector || '',
-              assertion: t?.assertion || 'exists',
-              weight: 10,
-              _raw: t
-            });
-          }
+          const expected = t?.expected;
+          mapped.push({
+            id: idx + 1,
+            type: 'dom',
+            target: t?.selector || '',
+            assertion: t?.assertion || 'exists',
+            attribute: t?.attribute || '',
+            value: Array.isArray(expected) ? JSON.stringify(expected) : (expected ?? '').toString(),
+            weight: 10,
+            _raw: t
+          });
         });
         cssSpec.forEach((t, idx) => {
           const id = mapped.length + idx + 1;
@@ -237,7 +309,26 @@ export default function TrainerPanel({ initialTab = 'builder', embedded = false 
         if (mapped.length > 0) {
           setTests(mapped);
           nextTestIdRef.current = mapped.length + 1;
+        } else {
+          setTests([
+            { id: 1, type: 'dom', target: '.card', assertion: 'exists', weight: 10 },
+            { id: 2, type: 'css', target: '.card', property: 'display', value: 'flex', weight: 20 }
+          ]);
+          nextTestIdRef.current = 3;
         }
+
+        const mappedInteractions = interactionSpec.map((step, idx) => ({
+          id: idx + 1,
+          action: step?.action || 'click',
+          selector: step?.selector || '',
+          value: step?.value ?? '',
+          key: step?.key || '',
+          delay: Number(step?.delay) >= 0 ? Number(step.delay) : 50,
+          waitForVisible: Boolean(step?.waitForVisible),
+          clear: Boolean(step?.clear)
+        }));
+        setInteractionSteps(mappedInteractions);
+        nextInteractionIdRef.current = mappedInteractions.length + 1;
       } catch (e) {
         toast({
           title: 'Draft Load Failed',
@@ -271,6 +362,31 @@ export default function TrainerPanel({ initialTab = 'builder', embedded = false 
     ]);
   };
 
+  const updateInteractionStep = (id, patch) => {
+    setInteractionSteps((prev) => prev.map((step) => (step.id === id ? { ...step, ...patch } : step)));
+  };
+
+  const removeInteractionStep = (id) => {
+    setInteractionSteps((prev) => prev.filter((step) => step.id !== id));
+  };
+
+  const addInteractionStep = () => {
+    const id = nextInteractionIdRef.current++;
+    setInteractionSteps((prev) => [
+      ...prev,
+      {
+        id,
+        action: 'click',
+        selector: '',
+        value: '',
+        key: 'Enter',
+        delay: 50,
+        waitForVisible: true,
+        clear: false
+      }
+    ]);
+  };
+
   const handleSaveDraft = async () => {
     if (!selectedQuestionId) return;
     setSaving(true);
@@ -292,7 +408,12 @@ export default function TrainerPanel({ initialTab = 'builder', embedded = false 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to save draft');
 
-      toast({ title: 'Draft Saved', description: 'Your changes have been saved.' });
+      toast({
+        title: data?.baseline?.queued ? 'Draft Saved & Queued' : 'Draft Saved',
+        description: data?.baseline?.queued
+          ? `Your changes were saved and baseline v${data.baseline.version} was queued automatically.`
+          : 'Your changes have been saved.'
+      });
     } catch (e) {
       toast({
         title: 'Save Failed',
@@ -320,7 +441,12 @@ export default function TrainerPanel({ initialTab = 'builder', embedded = false 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to create question');
       const q = data.question;
-      toast({ title: 'Question Created', description: 'New question is ready to edit.' });
+      toast({
+        title: data?.baseline?.queued ? 'Question Created & Queued' : 'Question Created',
+        description: data?.baseline?.queued
+          ? `New question is ready to edit and baseline v${data.baseline.version} is generating now.`
+          : 'New question is ready to edit.'
+      });
       setNewQuestionTitle('');
       setNewQuestionDescription('');
       // Refresh list and select the new question.
@@ -579,7 +705,7 @@ export default function TrainerPanel({ initialTab = 'builder', embedded = false 
               
               <div className="p-5 bg-gray-50 flex-1 overflow-y-auto">
                  <div className="space-y-3">
-                   {tests.map((test, i) => (
+                   {tests.map((test) => (
                      <div key={test.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex items-start gap-4 group">
                         <GripVertical size={20} className="text-gray-300 mt-2 cursor-grab active:cursor-grabbing hover:text-gray-500" />
                         <div className="flex-1 grid grid-cols-2 gap-4">
@@ -590,29 +716,60 @@ export default function TrainerPanel({ initialTab = 'builder', embedded = false 
                                value={test.type}
                                onChange={(e) => {
                                  const nextType = e.target.value;
-                                 if (nextType === 'css') {
-                                   updateTest(test.id, { type: nextType, property: test.property || '', value: test.value ?? '', assertion: undefined, _raw: undefined });
-                                 } else if (nextType === 'interaction') {
-                                   updateTest(test.id, { type: nextType, assertion: 'alertCalled', property: undefined, value: undefined, _raw: undefined });
+                                  if (nextType === 'css') {
+                                   updateTest(test.id, {
+                                     type: nextType,
+                                     property: test.property || '',
+                                     value: test.value ?? '',
+                                     assertion: undefined,
+                                     attribute: '',
+                                     _raw: undefined
+                                   });
                                  } else {
-                                   updateTest(test.id, { type: nextType, assertion: test.assertion || 'exists', property: undefined, value: undefined, _raw: undefined });
+                                   updateTest(test.id, {
+                                     type: nextType,
+                                     assertion: test.assertion || 'exists',
+                                     property: undefined,
+                                     value: test.value ?? '',
+                                     attribute: test.attribute ?? '',
+                                     _raw: undefined
+                                   });
                                  }
                                }}
                              >
                                 <option value="dom">DOM Structure</option>
                                 <option value="css">Computed CSS</option>
-                                <option value="interaction">Interaction Payload</option>
                              </select>
                            </div>
-                           <div>
-                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5">Target Selector</label>
-                             <input
-                               type="text"
-                               className="w-full text-sm border-gray-200 rounded-md font-mono text-emerald-600"
-                               value={test.target}
-                               onChange={(e) => updateTest(test.id, { target: e.target.value })}
-                             />
-                           </div>
+                           {test.type === 'dom' && (
+                             <div>
+                               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5">DOM Assertion</label>
+                               <select
+                                 className="w-full text-sm border-gray-200 rounded-md bg-gray-50 focus:bg-white"
+                                 value={test.assertion || 'exists'}
+                                 onChange={(e) => updateTest(test.id, {
+                                   assertion: e.target.value,
+                                   attribute: e.target.value === 'attributeEquals' ? (test.attribute || '') : '',
+                                   value: assertionNeedsExpected(e.target.value) ? (test.value ?? '') : ''
+                                 })}
+                               >
+                                 {DOM_ASSERTIONS.map((option) => (
+                                   <option key={option.value} value={option.value}>{option.label}</option>
+                                 ))}
+                               </select>
+                             </div>
+                           )}
+                           {assertionNeedsSelector(test.assertion || 'exists') && (
+                             <div>
+                               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5">Target Selector</label>
+                               <input
+                                 type="text"
+                                 className="w-full text-sm border-gray-200 rounded-md font-mono text-emerald-600"
+                                 value={test.target}
+                                 onChange={(e) => updateTest(test.id, { target: e.target.value })}
+                               />
+                             </div>
+                           )}
                            {test.type === 'css' && (
                              <>
                                <div>
@@ -635,6 +792,28 @@ export default function TrainerPanel({ initialTab = 'builder', embedded = false 
                                </div>
                              </>
                            )}
+                           {test.type === 'dom' && test.assertion === 'attributeEquals' && (
+                             <div>
+                               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5">Attribute Name</label>
+                               <input
+                                 type="text"
+                                 className="w-full text-sm border-gray-200 rounded-md font-mono"
+                                 value={test.attribute || ''}
+                                 onChange={(e) => updateTest(test.id, { attribute: e.target.value })}
+                               />
+                             </div>
+                           )}
+                           {test.type === 'dom' && assertionNeedsExpected(test.assertion || 'exists') && (
+                             <div>
+                               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5">Expected Value</label>
+                               <input
+                                 type="text"
+                                 className="w-full text-sm border-gray-200 rounded-md font-mono"
+                                 value={test.value ?? ''}
+                                 onChange={(e) => updateTest(test.id, { value: e.target.value })}
+                               />
+                             </div>
+                           )}
                            <div>
                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5">Rubric Weight</label>
                              <input
@@ -653,6 +832,128 @@ export default function TrainerPanel({ initialTab = 'builder', embedded = false 
                         </button>
                      </div>
                    ))}
+
+                   <div className="mt-6 rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/40 p-4">
+                     <div className="flex items-center justify-between gap-3">
+                       <div>
+                         <h3 className="text-sm font-bold text-gray-900">Interaction Simulation</h3>
+                         <p className="text-xs text-gray-500 mt-1">These steps run first, then DOM and computed-style assertions evaluate the resulting state.</p>
+                       </div>
+                       <button
+                         onClick={addInteractionStep}
+                         className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-white px-3 py-1.5 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors"
+                       >
+                         <Plus size={14} /> Add Step
+                       </button>
+                     </div>
+
+                     <div className="mt-4 space-y-3">
+                       {interactionSteps.length === 0 ? (
+                         <div className="rounded-xl border border-white/80 bg-white px-4 py-3 text-sm text-gray-500">
+                           No interaction steps yet. Add hover, click, type, scroll, or keypress steps to test active states and behaviors.
+                         </div>
+                       ) : interactionSteps.map((step, index) => (
+                         <div key={step.id} className="rounded-xl border border-white bg-white p-4 shadow-sm">
+                           <div className="flex items-start justify-between gap-4">
+                             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                               <div>
+                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5">Step {index + 1} Action</label>
+                                 <select
+                                   className="w-full text-sm border-gray-200 rounded-md bg-gray-50 focus:bg-white"
+                                   value={step.action}
+                                   onChange={(e) => updateInteractionStep(step.id, {
+                                     action: e.target.value,
+                                     selector: actionNeedsSelector(e.target.value) ? step.selector : '',
+                                     value: actionNeedsValue(e.target.value) ? step.value : '',
+                                     key: actionNeedsKey(e.target.value) ? (step.key || 'Enter') : '',
+                                     clear: e.target.value === 'type' ? step.clear : false,
+                                     waitForVisible: actionNeedsSelector(e.target.value) ? step.waitForVisible : false
+                                   })}
+                                 >
+                                   {INTERACTION_ACTIONS.map((option) => (
+                                     <option key={option.value} value={option.value}>{option.label}</option>
+                                   ))}
+                                 </select>
+                               </div>
+                               {actionNeedsSelector(step.action) && (
+                                 <div>
+                                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5">Selector</label>
+                                   <input
+                                     type="text"
+                                     className="w-full text-sm border-gray-200 rounded-md font-mono"
+                                     value={step.selector || ''}
+                                     onChange={(e) => updateInteractionStep(step.id, { selector: e.target.value })}
+                                   />
+                                 </div>
+                               )}
+                               {actionNeedsValue(step.action) && (
+                                 <div>
+                                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5">{step.action === 'wait' ? 'Wait (ms)' : 'Value'}</label>
+                                   <input
+                                     type={step.action === 'wait' ? 'number' : 'text'}
+                                     className="w-full text-sm border-gray-200 rounded-md font-mono"
+                                     value={step.value ?? ''}
+                                     onChange={(e) => updateInteractionStep(step.id, { value: e.target.value })}
+                                   />
+                                 </div>
+                               )}
+                               {actionNeedsKey(step.action) && (
+                                 <div>
+                                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5">Keyboard Key</label>
+                                   <input
+                                     type="text"
+                                     className="w-full text-sm border-gray-200 rounded-md font-mono"
+                                     value={step.key || ''}
+                                     onChange={(e) => updateInteractionStep(step.id, { key: e.target.value })}
+                                   />
+                                 </div>
+                               )}
+                               <div>
+                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5">Settle Delay (ms)</label>
+                                 <input
+                                   type="number"
+                                   className="w-full text-sm border-gray-200 rounded-md"
+                                   value={step.delay ?? 50}
+                                   onChange={(e) => updateInteractionStep(step.id, { delay: e.target.value })}
+                                 />
+                               </div>
+                             </div>
+                             <button
+                               onClick={() => removeInteractionStep(step.id)}
+                               className="text-gray-300 hover:text-red-500 transition-colors"
+                             >
+                               <Trash2 size={18} />
+                             </button>
+                           </div>
+
+                           {(actionNeedsSelector(step.action) || step.action === 'type') && (
+                             <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                               {actionNeedsSelector(step.action) && (
+                                 <label className="inline-flex items-center gap-2">
+                                   <input
+                                     type="checkbox"
+                                     checked={Boolean(step.waitForVisible)}
+                                     onChange={(e) => updateInteractionStep(step.id, { waitForVisible: e.target.checked })}
+                                   />
+                                   Wait for visible
+                                 </label>
+                               )}
+                               {step.action === 'type' && (
+                                 <label className="inline-flex items-center gap-2">
+                                   <input
+                                     type="checkbox"
+                                     checked={Boolean(step.clear)}
+                                     onChange={(e) => updateInteractionStep(step.id, { clear: e.target.checked })}
+                                   />
+                                   Clear before typing
+                                 </label>
+                               )}
+                             </div>
+                           )}
+                         </div>
+                       ))}
+                     </div>
+                   </div>
                    
                    {/* Generated JSON Preview */}
                     <div className="mt-8 pt-6 border-t border-gray-200">

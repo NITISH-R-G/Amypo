@@ -36,18 +36,31 @@ export default function StudentDashboard() {
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evalStageIndex, setEvalStageIndex] = useState(-1);
   const [activeSubmissionId, setActiveSubmissionId] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState('');
 
   const previewDoc = useMemo(() => buildPreviewDocument({ html: code.html, css: code.css, js: code.js }), [code]);
 
+  useEffect(() => {
+    const blob = new Blob([previewDoc], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    setPreviewUrl(url);
+
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [previewDoc]);
+
   const openPreviewInNewTab = () => {
-    const w = window.open('', '_blank', 'noopener,noreferrer');
+    if (!previewUrl) {
+      toast({ title: 'Preview Not Ready', description: 'The preview is still being prepared.', variant: 'destructive' });
+      return;
+    }
+
+    const w = window.open(previewUrl, '_blank');
     if (!w) {
       toast({ title: 'Popup Blocked', description: 'Allow popups to open the full preview.', variant: 'destructive' });
       return;
     }
-    w.document.open();
-    w.document.write(previewDoc);
-    w.document.close();
   };
 
   useEffect(() => {

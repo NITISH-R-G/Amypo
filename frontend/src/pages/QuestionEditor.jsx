@@ -114,6 +114,12 @@ export default function QuestionEditor() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'Save failed');
+        if (data?.baseline?.queued) {
+          toast({
+            title: 'Baseline Queued',
+            description: `Visual artifacts for this question were queued automatically as baseline v${data.baseline.version}.`
+          });
+        }
       } else {
         const res = await fetch(`/api/questions`, {
           method: 'POST',
@@ -123,7 +129,12 @@ export default function QuestionEditor() {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'Create failed');
         const newId = data?.question?.id;
-        toast({ title: 'Created', description: `Question ${newId} created.` });
+        toast({
+          title: data?.baseline?.queued ? 'Created & Queued' : 'Created',
+          description: data?.baseline?.queued
+            ? `Question ${newId} created. Baseline v${data.baseline.version} is generating now.`
+            : `Question ${newId} created.`
+        });
         navigate(`/teacher/editor/${newId}`);
       }
 

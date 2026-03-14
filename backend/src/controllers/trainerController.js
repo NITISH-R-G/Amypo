@@ -1,4 +1,9 @@
 const { Submission, EvaluationRun, Question, TestSpec, QuestionFile } = require('../models');
+const { enqueueBaseline } = require('../services/queueService');
+const {
+  prepareAutoBaselineSpec,
+  resolveCurrentBaselineVersion
+} = require('../services/baselineGenerationService');
 
 const DEFAULT_STARTER_HTML = `<div class="card">
   <!-- Start styling here -->
@@ -129,7 +134,15 @@ module.exports = {
       await QuestionFile.create({ question_id: question.id, type: 'css', filename: 'styles.css', content: '' });
       await QuestionFile.create({ question_id: question.id, type: 'js', filename: 'script.js', content: '' });
 
-      res.json({ question });
+      res.json({
+        question,
+        baseline: {
+          queued: false,
+          version: null,
+          job_id: null,
+          auto_filled: false
+        }
+      });
     } catch (error) {
       console.error('createQuestion failed:', error);
       // Sequelize often collapses this to "Validation error"; return more context for debugging.
@@ -192,16 +205,55 @@ module.exports = {
       await upsertFile('css', 'styles.css', starter_css);
       await upsertFile('js', 'script.js', starter_js);
 
+      let baseline = {
+        queued: false,
+        version: null,
+        jobId: null,
+        autoFilled: false
+      };
+
       if (spec_json && typeof spec_json === 'object') {
+        const preparedBaseline = prepareAutoBaselineSpec(spec_json, {
+          html: starter_html,
+          css: starter_css,
+          js: starter_js
+        });
         const existingSpec = await TestSpec.findOne({ where: { question_id: questionId } });
         if (existingSpec) {
-          await existingSpec.update({ spec_json });
+          await existingSpec.update({ spec_json: preparedBaseline.spec });
         } else {
-          await TestSpec.create({ question_id: questionId, spec_json });
+          await TestSpec.create({ question_id: questionId, spec_json: preparedBaseline.spec });
+        }
+
+        const currentVersion = await resolveCurrentBaselineVersion(questionId);
+        if (preparedBaseline.ready && currentVersion === 0) {
+          const nextVersion = currentVersion + 1;
+          const job = await enqueueBaseline(questionId, nextVersion);
+          baseline = {
+            queued: true,
+            version: nextVersion,
+            jobId: job?.id || null,
+            autoFilled: preparedBaseline.autoFilled
+          };
+        } else {
+          baseline = {
+            queued: false,
+            version: currentVersion || null,
+            jobId: null,
+            autoFilled: preparedBaseline.autoFilled
+          };
         }
       }
 
-      res.json({ success: true });
+      res.json({
+        success: true,
+        baseline: {
+          queued: baseline.queued,
+          version: baseline.version,
+          job_id: baseline.jobId,
+          auto_filled: baseline.autoFilled
+        }
+      });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

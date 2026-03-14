@@ -14,6 +14,28 @@ const connection = {
 
 console.log('Starting Evaluation Worker...');
 
+const SCORE_MAXIMA = { html: 20, css: 35, js: 35, visual: 10, a11y: 0, quality: 0 };
+
+const clampScore = (value, max) => {
+  const numeric = Number(value ?? 0);
+  const ceiling = Number(max ?? 0);
+  if (!Number.isFinite(numeric)) return 0;
+  if (!Number.isFinite(ceiling) || ceiling <= 0) return Math.max(0, numeric);
+  return Math.max(0, Math.min(ceiling, numeric));
+};
+
+const normalizeScores = (scores, rubric) => {
+  const maxima = { ...SCORE_MAXIMA, ...(rubric || {}) };
+  return {
+    html: clampScore(scores?.html, maxima.html),
+    css: clampScore(scores?.css, maxima.css),
+    js: clampScore(scores?.js, maxima.js),
+    visual: clampScore(scores?.visual, maxima.visual),
+    a11y: clampScore(scores?.a11y, maxima.a11y),
+    quality: clampScore(scores?.quality, maxima.quality)
+  };
+};
+
 const worker = new Worker('evaluation-queue', async job => {
   const mode = String(job?.data?.mode || 'evaluate');
   const submissionId = job?.data?.submissionId;
@@ -194,29 +216,31 @@ const worker = new Worker('evaluation-queue', async job => {
       result.visualArtifacts || []
     );
 
+    const normalizedScores = normalizeScores(result.scores, testSpec?.rubric);
+
     // 5. Update run in DB
     await run.update({
-      html_score: result.scores.html,
-      css_score: result.scores.css,
-      js_score: result.scores.js,
-      visual_score: result.scores.visual,
-      quality_score: result.scores.quality ?? 0,
+      html_score: normalizedScores.html,
+      css_score: normalizedScores.css,
+      js_score: normalizedScores.js,
+      visual_score: normalizedScores.visual,
+      quality_score: normalizedScores.quality,
       console_errors: result.consoleErrors,
       execution_timings: result.timings,
       ai_feedback: feedback,
       failed_tests: result.failedTests,
       visual_artifacts: result.visualArtifacts,
-      a11y_score: result.scores.a11y || 0,
+      a11y_score: normalizedScores.a11y,
       a11y_violations: result.a11yViolations || []
     });
 
-    const totalScore = result.total_score ??
-      (Number(result.scores.html || 0) +
-        Number(result.scores.css || 0) +
-        Number(result.scores.js || 0) +
-        Number(result.scores.visual || 0) +
-        Number(result.scores.a11y || 0) +
-        Number(result.scores.quality || 0));
+    const totalScore =
+      Number(normalizedScores.html || 0) +
+      Number(normalizedScores.css || 0) +
+      Number(normalizedScores.js || 0) +
+      Number(normalizedScores.visual || 0) +
+      Number(normalizedScores.a11y || 0) +
+      Number(normalizedScores.quality || 0);
 
     await submission.update({
       status: 'completed',

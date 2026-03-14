@@ -1,109 +1,189 @@
 const fs = require('fs');
-const PNG = require('pngjs').PNG;
+const { PNG } = require('pngjs');
 const pixelmatchImport = require('pixelmatch');
+
 const pixelmatch = pixelmatchImport.default || pixelmatchImport;
 
-/**
- * Generates a heatmap diff between two identically sized images.
- * @returns {numDiffPixels, diffPercentage}
- */
-async function generateVisualDiff(expectedPath, actualPath, diffPath) {
-  if (!fs.existsSync(expectedPath) || !fs.existsSync(actualPath)) {
-    throw new Error('Image paths do not exist for computing diff');
-  }
+function generateVisualDiff(expectedPath, actualPath, diffPath) {
+  let img1 = null;
+  let img2 = null;
+  let diff = null;
+  let normalized1 = null;
+  let normalized2 = null;
 
-  const img1 = PNG.sync.read(fs.readFileSync(expectedPath));
-  const img2 = PNG.sync.read(fs.readFileSync(actualPath));
-  
-  // pixelmatch requires identical dimensions. In practice screenshots should match,
-  // but we normalize to avoid hard failures (e.g., different fullPage heights).
-  const width = Math.max(img1.width, img2.width);
-  const height = Math.max(img1.height, img2.height);
+  try {
+    img1 = PNG.sync.read(fs.readFileSync(expectedPath));
+    img2 = PNG.sync.read(fs.readFileSync(actualPath));
 
-  const normalize = (img) => {
-    if (img.width === width && img.height === height) return img;
-    const out = new PNG({ width, height });
-    // Default data is zeroed; copy the original into top-left.
-    PNG.bitblt(img, out, 0, 0, img.width, img.height, 0, 0);
-    return out;
-  };
+    const width = Math.max(img1.width, img2.width);
+    const height = Math.max(img1.height, img2.height);
 
-  const n1 = normalize(img1);
-  const n2 = normalize(img2);
-  const diff = new PNG({ width, height });
+    normalized1 = new PNG({
+      width,
+      height,
+      colorType: 6,
+      inputHasAlpha: true
+    });
 
-  const numDiffPixels = pixelmatch(
-    n1.data,
-    n2.data,
-    diff.data, 
-    width, 
-    height, 
-    { threshold: 0.1 } // Anti-aliasing threshold
-  );
+    normalized2 = new PNG({
+      width,
+      height,
+      colorType: 6,
+      inputHasAlpha: true
+    });
 
-  fs.writeFileSync(diffPath, PNG.sync.write(diff));
+    normalized1.data.fill(0);
+    normalized2.data.fill(0);
 
-  const totalPixels = width * height;
-  const diffPercentage = (numDiffPixels / totalPixels) * 100;
+    PNG.bitblt(img1, normalized1, 0, 0, img1.width, img1.height, 0, 0);
+    PNG.bitblt(img2, normalized2, 0, 0, img2.width, img2.height, 0, 0);
 
-  // Generate Bounding Boxes (Hotspots) for high diff density
-  const hotspots = [];
-  const gridSize = 50; // 50x50 pixel grid resolution
-  
-  for (let y = 0; y < height; y += gridSize) {
-    for (let x = 0; x < width; x += gridSize) {
-      let diffCount = 0;
-      for (let gy = y; gy < Math.min(y + gridSize, height); gy++) {
-        for (let gx = x; gx < Math.min(x + gridSize, width); gx++) {
-          const idx = (width * gy + gx) * 4;
-          // Pixelmatch uses red (255, 0, 0) for differences by default
-          if (diff.data[idx] === 255 && diff.data[idx+1] === 0 && diff.data[idx+2] === 0) {
-            diffCount++;
+    diff = new PNG({
+      width,
+      height,
+      colorType: 6,
+      inputHasAlpha: true
+    });
+
+    const numDiffPixels = pixelmatch(
+      normalized1.data,
+      normalized2.data,
+      diff.data,
+      width,
+      height,
+      {
+        threshold: 0.1,
+        includeAA: false,
+        alpha: 0.35,
+        diffColor: [255, 0, 0],
+        diffColorAlt: [255, 0, 0]
+      }
+    );
+
+    fs.writeFileSync(diffPath, PNG.sync.write(diff));
+
+    const cellSize = 20;
+    const padding = 10;
+    const minDiffRatio = 0.02;
+    const cellsX = Math.ceil(width / cellSize);
+    const cellsY = Math.ceil(height / cellSize);
+    const cellCounts = new Uint32Array(cellsX * cellsY);
+
+    for (let y = 0; y < height; y += 1) {
+      const rowOffset = y * width * 4;
+      const cellY = Math.floor(y / cellSize);
+
+      for (let x = 0; x < width; x += 1) {
+        const idx = rowOffset + x * 4;
+        const isDiffPixel =
+          diff.data[idx] === 255 &&
+          diff.data[idx + 1] === 0 &&
+          diff.data[idx + 2] === 0 &&
+          diff.data[idx + 3] > 0;
+
+        if (!isDiffPixel) {
+          continue;
+        }
+
+        const cellX = Math.floor(x / cellSize);
+        cellCounts[cellY * cellsX + cellX] += 1;
+      }
+    }
+
+    const mergedHotspots = [];
+
+    const intersectsOrTouches = (boxA, boxB) =>
+      boxA.x <= boxB.x + boxB.width &&
+      boxA.x + boxA.width >= boxB.x &&
+      boxA.y <= boxB.y + boxB.height &&
+      boxA.y + boxA.height >= boxB.y;
+
+    const mergeBoxes = (boxA, boxB) => {
+      const left = Math.min(boxA.x, boxB.x);
+      const top = Math.min(boxA.y, boxB.y);
+      const right = Math.max(boxA.x + boxA.width, boxB.x + boxB.width);
+      const bottom = Math.max(boxA.y + boxA.height, boxB.y + boxB.height);
+
+      return {
+        x: left,
+        y: top,
+        width: right - left,
+        height: bottom - top
+      };
+    };
+
+    for (let cellY = 0; cellY < cellsY; cellY += 1) {
+      for (let cellX = 0; cellX < cellsX; cellX += 1) {
+        const cellIndex = cellY * cellsX + cellX;
+        const cellOriginX = cellX * cellSize;
+        const cellOriginY = cellY * cellSize;
+        const cellWidth = Math.min(cellSize, width - cellOriginX);
+        const cellHeight = Math.min(cellSize, height - cellOriginY);
+        const cellArea = cellWidth * cellHeight;
+
+        if (cellArea <= 0) {
+          continue;
+        }
+
+        if (cellCounts[cellIndex] < Math.ceil(cellArea * minDiffRatio)) {
+          continue;
+        }
+
+        let candidate = {
+          x: cellOriginX,
+          y: cellOriginY,
+          width: cellWidth,
+          height: cellHeight
+        };
+
+        let merged = true;
+
+        while (merged) {
+          merged = false;
+
+          for (let i = mergedHotspots.length - 1; i >= 0; i -= 1) {
+            if (!intersectsOrTouches(candidate, mergedHotspots[i])) {
+              continue;
+            }
+
+            candidate = mergeBoxes(candidate, mergedHotspots[i]);
+            mergedHotspots.splice(i, 1);
+            merged = true;
           }
         }
-      }
-      
-      // If a cell has > 2% diff density, mark it as a hotspot box
-      if (diffCount > (gridSize * gridSize * 0.02)) {
-        // Merge with existing hotspots if overlapping or adjacent (simplified: just cluster heavily)
-        hotspots.push({
-          x,
-          y,
-          width: Math.min(gridSize, width - x),
-          height: Math.min(gridSize, height - y)
-        });
-      }
-    }
-  }
 
-  // Simple bounding box merging (Combine overlapping/adjacent boxes)
-  const mergedHotspots = [];
-  for (const box of hotspots) {
-    let merged = false;
-    for (const m of mergedHotspots) {
-      if (
-        box.x <= m.x + m.width + 10 && box.x + box.width + 10 >= m.x &&
-        box.y <= m.y + m.height + 10 && box.y + box.height + 10 >= m.y
-      ) {
-        // Extend m to contain box
-        const newX = Math.min(m.x, box.x);
-        const newY = Math.min(m.y, box.y);
-        const newRight = Math.max(m.x + m.width, box.x + box.width);
-        const newBottom = Math.max(m.y + m.height, box.y + box.height);
-        m.x = newX;
-        m.y = newY;
-        m.width = newRight - newX;
-        m.height = newBottom - newY;
-        merged = true;
-        break;
+        mergedHotspots.push(candidate);
       }
     }
-    if (!merged) {
-      mergedHotspots.push({ ...box });
-    }
-  }
 
-  return { numDiffPixels, diffPercentage, hotspots: mergedHotspots, width, height };
+    const hotspots = mergedHotspots.map((box) => {
+      const x = Math.max(0, box.x - padding);
+      const y = Math.max(0, box.y - padding);
+      const right = Math.min(width, box.x + box.width + padding);
+      const bottom = Math.min(height, box.y + box.height + padding);
+
+      return {
+        x,
+        y,
+        width: Math.max(1, right - x),
+        height: Math.max(1, bottom - y)
+      };
+    });
+
+    return {
+      numDiffPixels,
+      diffPercentage: (numDiffPixels / (width * height)) * 100,
+      hotspots,
+      width,
+      height
+    };
+  } finally {
+    img1 = null;
+    img2 = null;
+    diff = null;
+    normalized1 = null;
+    normalized2 = null;
+  }
 }
 
 module.exports = { generateVisualDiff };

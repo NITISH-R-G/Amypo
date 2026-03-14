@@ -2,6 +2,11 @@ const { Question, TestSpec, QuestionFile, Baseline } = require('../models');
 const fs = require('fs');
 const path = require('path');
 const { enqueueBaseline } = require('../services/queueService');
+const {
+  prepareAutoBaselineSpec,
+  resolveCurrentBaselineVersion,
+  resolveNextBaselineVersion
+} = require('../services/baselineGenerationService');
 
 const DEFAULT_STARTER_FILES = {
   html: `<div class="card">\n  <!-- Start styling here -->\n</div>`,
@@ -81,21 +86,53 @@ async function createQuestion(req, res) {
     // Ensure starter files exist for Practice Workspace (QuestionFile is the source of truth there).
     await upsertQuestionFiles(q.id, files || starter_code || DEFAULT_STARTER_FILES);
 
+    const fallbackFiles = files || starter_code || DEFAULT_STARTER_FILES;
+    const initialSpec = spec_json || {
+      version: '1.0',
+      viewports: [
+        { name: 'desktop', width: 1366, height: 768 },
+        { name: 'mobile', width: 390, height: 844 }
+      ],
+      rubric: { html: 20, css: 35, js: 35, visual: 10, quality: 0, a11y: 0 },
+      tests: { dom: [], css: [], interactions: [] }
+    };
+
+    const preparedBaseline = prepareAutoBaselineSpec(initialSpec, fallbackFiles);
+
     // Ensure a TestSpec exists.
     await TestSpec.create({
       question_id: q.id,
-      spec_json: spec_json || {
-        version: '1.0',
-        viewports: [
-          { name: 'desktop', width: 1366, height: 768 },
-          { name: 'mobile', width: 390, height: 844 }
-        ],
-        rubric: { html: 20, css: 35, js: 35, visual: 10, quality: 0, a11y: 0 },
-        tests: { dom: [], css: [], interactions: [] }
-      }
+      spec_json: preparedBaseline.spec
     });
 
-    return res.status(201).json({ question: q });
+    let baseline = {
+      queued: false,
+      version: null,
+      jobId: null,
+      autoFilled: preparedBaseline.autoFilled
+    };
+
+    const currentVersion = await resolveCurrentBaselineVersion(q.id);
+    if (preparedBaseline.ready && currentVersion === 0) {
+      const nextVersion = currentVersion + 1;
+      const job = await enqueueBaseline(q.id, nextVersion);
+      baseline = {
+        queued: true,
+        version: nextVersion,
+        jobId: job?.id || null,
+        autoFilled: preparedBaseline.autoFilled
+      };
+    }
+
+    return res.status(201).json({
+      question: q,
+      baseline: {
+        queued: baseline.queued,
+        version: baseline.version,
+        job_id: baseline.jobId,
+        auto_filled: baseline.autoFilled
+      }
+    });
   } catch (error) {
     const details = Array.isArray(error?.errors) ? error.errors.map(e => e.message) : undefined;
     return res.status(500).json({ error: error.message, details });
@@ -122,13 +159,49 @@ async function updateQuestion(req, res) {
     const starter_code = body.starter_code && typeof body.starter_code === 'object' ? body.starter_code : null;
     if (files || starter_code) await upsertQuestionFiles(questionId, files || starter_code);
 
+    let baseline = {
+      queued: false,
+      version: null,
+      jobId: null,
+      autoFilled: false
+    };
+
     if (body.spec_json && typeof body.spec_json === 'object') {
+      const fallbackFiles = files || starter_code || {};
+      const preparedBaseline = prepareAutoBaselineSpec(body.spec_json, fallbackFiles);
       const existing = await TestSpec.findOne({ where: { question_id: questionId } });
-      if (existing) await existing.update({ spec_json: body.spec_json });
-      else await TestSpec.create({ question_id: questionId, spec_json: body.spec_json });
+      if (existing) await existing.update({ spec_json: preparedBaseline.spec });
+      else await TestSpec.create({ question_id: questionId, spec_json: preparedBaseline.spec });
+
+      const currentVersion = await resolveCurrentBaselineVersion(questionId);
+      if (preparedBaseline.ready && currentVersion === 0) {
+        const nextVersion = currentVersion + 1;
+        const job = await enqueueBaseline(questionId, nextVersion);
+        baseline = {
+          queued: true,
+          version: nextVersion,
+          jobId: job?.id || null,
+          autoFilled: preparedBaseline.autoFilled
+        };
+      } else {
+        baseline = {
+          queued: false,
+          version: currentVersion || null,
+          jobId: null,
+          autoFilled: preparedBaseline.autoFilled
+        };
+      }
     }
 
-    return res.json({ success: true });
+    return res.json({
+      success: true,
+      baseline: {
+        queued: baseline.queued,
+        version: baseline.version,
+        job_id: baseline.jobId,
+        auto_filled: baseline.autoFilled
+      }
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -172,23 +245,7 @@ async function generateBaseline(req, res) {
       return res.status(400).json({ error: 'Reference solution (testSpec.baseline) is required to generate baseline' });
     }
 
-    const currentMaxDb = await Baseline.max('version', { where: { question_id: questionId } });
-
-    // Also consider baseline folders in the artifacts volume (covers cases where files exist but DB rows don't).
-    let currentMaxFs = 0;
-    try {
-      const baseDir = path.resolve(__dirname, '..', '..', '..', 'artifacts', 'baselines', `q${questionId}`);
-      if (fs.existsSync(baseDir)) {
-        const entries = fs.readdirSync(baseDir, { withFileTypes: true });
-        for (const e of entries) {
-          if (!e.isDirectory()) continue;
-          const m = /^v(\d+)$/.exec(e.name);
-          if (m) currentMaxFs = Math.max(currentMaxFs, Number(m[1]) || 0);
-        }
-      }
-    } catch (_) {}
-
-    const nextVersion = Math.max(Number(currentMaxDb) || 0, currentMaxFs) + 1;
+    const nextVersion = await resolveNextBaselineVersion(questionId);
 
     const job = await enqueueBaseline(questionId, nextVersion);
 

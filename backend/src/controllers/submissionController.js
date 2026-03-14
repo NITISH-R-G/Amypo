@@ -1,4 +1,4 @@
-const { Submission, Question, EvaluationRun, Artifact, User } = require('../models');
+const { Submission, Question, EvaluationRun, Artifact, User, TestSpec } = require('../models');
 const path = require('path');
 const fs = require('fs');
 const staticValidationService = require('../services/staticValidationService');
@@ -42,6 +42,28 @@ const resolveRunForSubmission = async (submissionId, requestedRunId = null) => {
     include: [Artifact],
     order: [['created_at', 'DESC'], ['id', 'DESC']]
   });
+};
+
+const SCORE_MAXIMA = { html: 20, css: 35, js: 35, visual: 10, a11y: 0, quality: 0 };
+
+const clampScore = (value, max) => {
+  const numeric = Number(value ?? 0);
+  const ceiling = Number(max ?? 0);
+  if (!Number.isFinite(numeric)) return 0;
+  if (!Number.isFinite(ceiling) || ceiling <= 0) return Math.max(0, numeric);
+  return Math.max(0, Math.min(ceiling, numeric));
+};
+
+const normalizeScores = (rawScores, rubric) => {
+  const maxima = { ...SCORE_MAXIMA, ...(rubric || {}) };
+  return {
+    html: clampScore(rawScores?.html, maxima.html),
+    css: clampScore(rawScores?.css, maxima.css),
+    js: clampScore(rawScores?.js, maxima.js),
+    visual: clampScore(rawScores?.visual, maxima.visual),
+    a11y: clampScore(rawScores?.a11y, maxima.a11y),
+    quality: clampScore(rawScores?.quality, maxima.quality)
+  };
 };
 
 const submitCode = async (req, res) => {
@@ -274,6 +296,9 @@ const getSubmissionResult = async (req, res) => {
       });
     }
 
+    const testSpecRow = await TestSpec.findOne({ where: { question_id: submission.question_id } });
+    const rubric = testSpecRow?.spec_json?.rubric || null;
+
     const artifactsRoot = path.resolve(__dirname, '..', '..', '..', 'artifacts');
     const runArtifactsDir = path.join(artifactsRoot, String(run.id));
 
@@ -359,26 +384,36 @@ const getSubmissionResult = async (req, res) => {
     const desktop = visualTests.find(v => v.viewport === 'desktop') || visualTests[0] || null;
     const mismatchPercent = Number(desktop?.diffPercent ?? 0);
     const mismatchPercentage = mismatchPercent;
+    const normalizedScores = normalizeScores({
+      html: run.html_score,
+      css: run.css_score,
+      js: run.js_score,
+      visual: run.visual_score,
+      a11y: run.a11y_score,
+      quality: run.quality_score
+    }, rubric);
+    const totalScore = normalizedScores.html + normalizedScores.css + normalizedScores.js + normalizedScores.visual + normalizedScores.a11y + normalizedScores.quality;
 
     return res.json({
       status: submission.status,
       submission_id: submission.id,
       run_id: run.id,
-      total_score: submission.total_score ?? null,
-      scores: {
-        html: run.html_score ?? 0,
-        css: run.css_score ?? 0,
-        js: run.js_score ?? 0,
-        visual: run.visual_score ?? 0,
-        a11y: run.a11y_score ?? 0,
-        quality: run.quality_score ?? 0
+      total_score: totalScore,
+      rubric: {
+        html: Number(rubric?.html ?? SCORE_MAXIMA.html) || 0,
+        css: Number(rubric?.css ?? SCORE_MAXIMA.css) || 0,
+        js: Number(rubric?.js ?? SCORE_MAXIMA.js) || 0,
+        visual: Number(rubric?.visual ?? SCORE_MAXIMA.visual) || 0,
+        a11y: Number(rubric?.a11y ?? SCORE_MAXIMA.a11y) || 0,
+        quality: Number(rubric?.quality ?? SCORE_MAXIMA.quality) || 0
       },
+      scores: normalizedScores,
       breakdown: {
-        dom: run.html_score ?? 0,
-        css: run.css_score ?? 0,
-        visual: run.visual_score ?? 0,
-        a11y: run.a11y_score ?? 0,
-        quality: run.quality_score ?? 0
+        dom: normalizedScores.html,
+        css: normalizedScores.css,
+        visual: normalizedScores.visual,
+        a11y: normalizedScores.a11y,
+        quality: normalizedScores.quality
       },
       a11yViolations: run.a11y_violations || [],
       mismatchPercent,

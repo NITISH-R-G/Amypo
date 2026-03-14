@@ -16,6 +16,7 @@ export default function EvaluationResults() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [replayBusy, setReplayBusy] = useState(false);
   const [userId] = useState(() => window.localStorage.getItem('amypo_user_id') || '1');
+  const [selectedViewport, setSelectedViewport] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -152,6 +153,45 @@ export default function EvaluationResults() {
     }
   };
 
+  const scores = result?.scores || { html: 0, css: 0, js: 0, visual: 0 };
+  const rubric = result?.rubric || { html: 20, css: 35, js: 35, visual: 10, a11y: 0, quality: 0 };
+  const totalScore =
+    result?.total_score ?? (scores.html + scores.css + scores.js + scores.visual);
+  const visual = result?.visualArtifacts || null;
+  const mismatchPercent = Number(result?.mismatchPercentage ?? result?.mismatchPercent ?? 0);
+  const failedTests = result?.failedTests || [];
+  const aiFeedback = result?.aiFeedback || { summary: "No AI feedback generated.", suggestions: [] };
+
+  const visualTests = Array.isArray(result?.visualTests) ? result.visualTests : [];
+  const viewportsToRender = visualTests.length > 0
+    ? visualTests
+    : (visual
+        ? [{
+            viewport: 'desktop',
+            expected: visual.expected || '',
+            actual: visual.actual || '',
+            diff: visual.diff || '',
+            diffPercent: mismatchPercent,
+            boxes: visual.boxes || []
+          }]
+        : []);
+
+  useEffect(() => {
+    if (viewportsToRender.length === 0) {
+      if (selectedViewport) setSelectedViewport('');
+      return;
+    }
+
+    const hasCurrent = viewportsToRender.some((vt) => String(vt?.viewport || '') === selectedViewport);
+    if (hasCurrent) return;
+
+    const preferredViewport = viewportsToRender.find((vt) => String(vt?.viewport || '').toLowerCase() === 'desktop')?.viewport
+      || viewportsToRender[0]?.viewport
+      || '';
+
+    setSelectedViewport(String(preferredViewport));
+  }, [viewportsToRender, selectedViewport]);
+
   if (loading) {
     return <div className="h-full flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div></div>;
   }
@@ -166,27 +206,7 @@ export default function EvaluationResults() {
     );
   }
 
-  const scores = result.scores || { html: 0, css: 0, js: 0, visual: 0 };
-  const totalScore =
-    result.total_score ?? (scores.html + scores.css + scores.js + scores.visual);
-  const visual = result.visualArtifacts || null;
-  const mismatchPercent = Number(result.mismatchPercentage ?? result.mismatchPercent ?? 0);
-  const failedTests = result.failedTests || [];
-  const aiFeedback = result.aiFeedback || { summary: "No AI feedback generated.", suggestions: [] };
-
-  const visualTests = Array.isArray(result.visualTests) ? result.visualTests : [];
-  const viewportsToRender = visualTests.length > 0
-    ? visualTests
-    : (visual
-        ? [{
-            viewport: 'desktop',
-            expected: visual.expected || '',
-            actual: visual.actual || '',
-            diff: visual.diff || '',
-            diffPercent: mismatchPercent,
-            boxes: visual.boxes || []
-          }]
-        : []);
+  const activeVisualTest = viewportsToRender.find((vt) => String(vt?.viewport || '') === selectedViewport) || viewportsToRender[0] || null;
 
   return (
     <div className="max-w-6xl mx-auto h-full flex flex-col gap-6 pb-12">
@@ -251,34 +271,34 @@ export default function EvaluationResults() {
               <div className="w-full mt-8 space-y-4">
                  <div className="space-y-1">
                    <div className="flex justify-between text-xs font-semibold text-gray-600">
-                     <span>HTML</span> <span>{scores.html}/20</span>
+                     <span>HTML</span> <span>{scores.html}/{rubric.html}</span>
                    </div>
                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                     <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(scores.html/20)*100}%` }}></div>
+                     <div className="h-full bg-blue-500 rounded-full" style={{ width: `${rubric.html > 0 ? Math.min(100, (scores.html / rubric.html) * 100) : 0}%` }}></div>
                    </div>
                  </div>
                  <div className="space-y-1">
                    <div className="flex justify-between text-xs font-semibold text-gray-600">
-                     <span>CSS</span> <span>{scores.css}/35</span>
+                     <span>CSS</span> <span>{scores.css}/{rubric.css}</span>
                    </div>
                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                     <div className="h-full bg-pink-500 rounded-full" style={{ width: `${(scores.css/35)*100}%` }}></div>
+                     <div className="h-full bg-pink-500 rounded-full" style={{ width: `${rubric.css > 0 ? Math.min(100, (scores.css / rubric.css) * 100) : 0}%` }}></div>
                    </div>
                  </div>
                  <div className="space-y-1">
                    <div className="flex justify-between text-xs font-semibold text-gray-600">
-                     <span>JavaScript</span> <span>{scores.js}/35</span>
+                     <span>JavaScript</span> <span>{scores.js}/{rubric.js}</span>
                    </div>
                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                     <div className="h-full bg-yellow-500 rounded-full" style={{ width: `${(scores.js/35)*100}%` }}></div>
+                     <div className="h-full bg-yellow-500 rounded-full" style={{ width: `${rubric.js > 0 ? Math.min(100, (scores.js / rubric.js) * 100) : 0}%` }}></div>
                    </div>
                  </div>
                  <div className="space-y-1">
                    <div className="flex justify-between text-xs font-semibold text-gray-600">
-                     <span>Visual Match</span> <span>{scores.visual}/10</span>
+                     <span>Visual Match</span> <span>{scores.visual}/{rubric.visual}</span>
                    </div>
                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                     <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(scores.visual/10)*100}%` }}></div>
+                     <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${rubric.visual > 0 ? Math.min(100, (scores.visual / rubric.visual) * 100) : 0}%` }}></div>
                    </div>
                  </div>
               </div>
@@ -296,36 +316,50 @@ export default function EvaluationResults() {
                Evaluation artifacts not generated yet.
              </div>
            ) : (
-             viewportsToRender.map((vt) => {
-               const mismatch = Number(vt?.diffPercent ?? vt?.diffPercentage ?? mismatchPercent ?? 0);
-               const boxes = vt?.boxes || vt?.hotspots || [];
-
-               return (
-                 <div key={vt?.viewport || 'viewport'} className="flex flex-col gap-3">
-                   <div className="flex items-center justify-between px-1">
-                     <div className="text-xs font-black uppercase tracking-widest text-gray-400">
-                       Viewport: <span className="text-gray-700">{vt?.viewport || 'default'}</span>
-                     </div>
-                     <div className="text-xs font-mono text-gray-500">
-                       Mismatch: {Number.isFinite(mismatch) ? mismatch.toFixed(2) : '0.00'}%
-                     </div>
-                   </div>
-                   <DiffViewer
-                     expectedUrl={vt?.expected || ''}
-                     actualUrl={vt?.actual || ''}
-                     diffUrl={vt?.diff || ''}
-                     expectedRenderUrl={vt?.expectedRenderUrl || ''}
-                     actualRenderUrl={vt?.actualRenderUrl || ''}
-                     mismatchPercentage={mismatch}
-                     boxes={Array.isArray(boxes) ? boxes : []}
-                     comparisonWidth={Number(vt?.comparisonWidth ?? 0)}
-                     comparisonHeight={Number(vt?.comparisonHeight ?? 0)}
-                     viewportWidth={Number(vt?.viewportWidth ?? 0)}
-                     viewportHeight={Number(vt?.viewportHeight ?? 0)}
-                   />
+             <div className="flex flex-col gap-3">
+               <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+                 <div className="text-xs font-black uppercase tracking-widest text-gray-400">
+                   Viewport: <span className="text-gray-700">{activeVisualTest?.viewport || 'default'}</span>
                  </div>
-               );
-             })
+
+                 {viewportsToRender.length > 1 && (
+                   <div className="flex flex-wrap items-center gap-2">
+                     {viewportsToRender.map((vt) => {
+                       const isActive = String(vt?.viewport || '') === String(activeVisualTest?.viewport || '');
+                       return (
+                         <button
+                           key={`viewport-${vt?.viewport || 'default'}`}
+                           type="button"
+                           onClick={() => setSelectedViewport(String(vt?.viewport || 'default'))}
+                           className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                             isActive
+                               ? 'bg-emerald-600 text-white shadow-sm'
+                               : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                           }`}
+                         >
+                           {vt?.viewport || 'default'}
+                         </button>
+                       );
+                     })}
+                   </div>
+                 )}
+               </div>
+
+               <DiffViewer
+                 key={`submission-${result?.submission_id || id}-run-${result?.run_id || 'latest'}-viewport-${activeVisualTest?.viewport || 'default'}`}
+                 expectedUrl={activeVisualTest?.expected || ''}
+                 actualUrl={activeVisualTest?.actual || ''}
+                 diffUrl={activeVisualTest?.diff || ''}
+                 expectedRenderUrl={activeVisualTest?.expectedRenderUrl || ''}
+                 actualRenderUrl={activeVisualTest?.actualRenderUrl || ''}
+                 mismatchPercentage={Number(activeVisualTest?.diffPercent ?? activeVisualTest?.diffPercentage ?? mismatchPercent ?? 0)}
+                 boxes={Array.isArray(activeVisualTest?.boxes || activeVisualTest?.hotspots) ? (activeVisualTest?.boxes || activeVisualTest?.hotspots) : []}
+                 comparisonWidth={Number(activeVisualTest?.comparisonWidth ?? 0)}
+                 comparisonHeight={Number(activeVisualTest?.comparisonHeight ?? 0)}
+                 viewportWidth={Number(activeVisualTest?.viewportWidth ?? 0)}
+                 viewportHeight={Number(activeVisualTest?.viewportHeight ?? 0)}
+               />
+             </div>
            )}
 
            <FailedTestsTable failedTests={failedTests} />
