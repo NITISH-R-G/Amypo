@@ -15,11 +15,22 @@ export default function AdminDashboard() {
   const [activeReplayId, setActiveReplayId] = useState(null);
   const [replayEvents, setReplayEvents] = useState([]);
 
+  const fetchWhitelist = async () => {
+    try { const res = await axios.get(`${API_BASE}/whitelist`); setWhitelist(res.data); } catch (e) { console.error(e); }
+  };
+
+  const fetchLogs = async () => {
+    try { const res = await axios.get(`${API_BASE}/logs`); setLogs(res.data); } catch (e) { console.error(e); }
+  };
+
   useEffect(() => {
     // Demo auth: mark this session as admin so admin-only actions (like replay) are enabled.
-    try { window.localStorage.setItem('amypo_user_id', '2'); } catch (_) {}
+    try { window.localStorage.setItem('amypo_user_id', '2'); } catch (_) {
+      // Ignore
+    }
     fetchWhitelist();
     fetchLogs();
+
   }, []);
 
   useEffect(() => {
@@ -55,13 +66,6 @@ export default function AdminDashboard() {
     };
   }, [replayModalOpen, activeReplayId]);
 
-  const fetchWhitelist = async () => {
-    try { const res = await axios.get(`${API_BASE}/whitelist`); setWhitelist(res.data); } catch (e) { console.error(e); }
-  };
-
-  const fetchLogs = async () => {
-    try { const res = await axios.get(`${API_BASE}/logs`); setLogs(res.data); } catch (e) { console.error(e); }
-  };
 
   const addDomain = async () => {
     if (!newDomain) return;
