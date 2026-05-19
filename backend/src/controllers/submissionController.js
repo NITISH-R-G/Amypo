@@ -304,10 +304,10 @@ const getSubmissionResult = async (req, res) => {
 
     const safeBasename = (p) => {
       if (!p) return null;
-      const base = path.basename(String(p));
+      const strP = String(p);
       // Reject path traversal attempts.
-      if (base.includes('..') || base.includes('/') || base.includes('\\')) return null;
-      return base;
+      if (strP.includes('..') || strP.includes('/') || strP.includes('\\')) return null;
+      return path.basename(strP);
     };
 
     const artifactUrl = (filename) =>
@@ -442,8 +442,12 @@ const getSubmissionResult = async (req, res) => {
 const getSubmissionArtifact = async (req, res) => {
   try {
     const { id, filename } = req.params;
-    const safeName = path.basename(String(filename || ''));
-    if (!safeName || safeName.includes('..')) return res.status(400).send('Invalid filename');
+    const strFilename = String(filename || '');
+    if (strFilename.includes('..') || strFilename.includes('/') || strFilename.includes('\\')) {
+      return res.status(400).send('Invalid filename');
+    }
+    const safeName = path.basename(strFilename);
+    if (!safeName) return res.status(400).send('Invalid filename');
 
     const submission = await Submission.findByPk(id);
     if (!submission) return res.status(404).send('Submission not found');
