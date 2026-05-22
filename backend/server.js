@@ -2,39 +2,27 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 const { sequelize } = require('./src/models');
 
 dotenv.config();
 
 const app = express();
-// AI Fix-It Endpoint (Hackathon Demo version)
-app.post('/api/ai/fix', async (req, res) => {
-  const { html, css, js, prompt } = req.body;
-  
-  // Simulated AI Logic: This would typically call Gemini/OpenAI
-  // For the hackathon, we'll provide a 'magical' improvement for common issues
-  let fixedHtml = html;
-  let fixedCss = css;
-  let fixedJs = js;
 
-  // Example: If it's the demo question (button styling), let's ensure it follows best practices
-  if (css.includes('button') && !css.includes('transition')) {
-    fixedCss += '\n\n/* AI Suggestion: Added smooth transitions and hover states */\nbutton {\n  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);\n  cursor: pointer;\n}\nbutton:hover {\n  filter: brightness(1.1);\n  transform: translateY(-1px);\n}';
-  }
+// Security and Performance Middlewares
+app.use(helmet());
+app.use(compression());
 
-  if (html.includes('<button') && !html.includes('aria-label') && !html.includes('role')) {
-    fixedHtml = fixedHtml.replace(/<button/g, '<button aria-label="Action button"');
-  }
-
-  // Simulate AI delay for UX 'thinking' feel
-  await new Promise(r => setTimeout(r, 1500));
-
-  res.json({
-    success: true,
-    fixedCode: { html: fixedHtml, css: fixedCss, js: fixedJs },
-    explanation: "I've optimized your CSS with modern transitions and added ARIA labels for better accessibility. Your layout now uses hardware-accelerated transforms for smoother interactions."
-  });
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
+app.use('/api', limiter);
 
 const PORT = process.env.PORT || 5000;
 
@@ -52,6 +40,7 @@ const submissionController = require('./src/controllers/submissionController');
 const adminRoutes = require('./src/routes/adminRoutes');
 const trainerRoutes = require('./src/routes/trainerRoutes');
 const questionRoutes = require('./src/routes/questionRoutes');
+const aiRoutes = require('./src/routes/aiRoutes');
 
 // Routes will be mounted here
 app.use('/api/submissions', submissionRoutes);
@@ -60,6 +49,7 @@ app.get('/submissions/:id/artifacts/:filename', submissionController.getSubmissi
 app.use('/api/admin', adminRoutes);
 app.use('/api/trainer', trainerRoutes);
 app.use('/api/questions', questionRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Assessment Engine API is running' });
