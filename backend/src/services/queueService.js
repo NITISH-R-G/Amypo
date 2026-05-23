@@ -8,8 +8,39 @@ const connection = {
   port: process.env.REDIS_PORT || 6379,
 };
 
-const evaluationQueue = new Queue('evaluation-queue', { connection });
-const queueEvents = new QueueEvents('evaluation-queue', { connection });
+// Prevent connecting if we're not running the server to avoid test hang-ups
+// Use mocked queue in tests to prevent undefined errors when other routes enqueue jobs
+let evaluationQueue;
+let queueEvents;
+
+if (process.env.NODE_ENV !== 'test') {
+  evaluationQueue = new Queue('evaluation-queue', { connection });
+  queueEvents = new QueueEvents('evaluation-queue', { connection });
+} else {
+  evaluationQueue = {
+    add: async () => ({ id: 'mock-job-id' }),
+    close: async () => {}
+  };
+  queueEvents = {
+    on: () => {},
+    off: () => {},
+    close: async () => {}
+  };
+}
+
+// Export the ability to close the queue connections
+const closeQueues = async () => {
+  try {
+    if (evaluationQueue) {
+      await evaluationQueue.close();
+    }
+    if (queueEvents) {
+      await queueEvents.close();
+    }
+  } catch (e) {
+    console.error('Error closing queues', e);
+  }
+};
 
 const enqueueEvaluation = async (submissionId, runId = null) => {
   const sid = Number(submissionId);
@@ -45,6 +76,7 @@ const enqueueBaseline = async (questionId, version) => {
 module.exports = {
   evaluationQueue,
   queueEvents,
+  closeQueues,
   enqueueEvaluation,
   enqueueBaseline
 };
