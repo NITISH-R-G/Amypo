@@ -17,6 +17,7 @@
     "cross-env": "^10.1.0",
     "jest": "^30.4.2",
     "nodemon": "^3.1.14",
+    "sqlite3": "^6.0.1",
     "supertest": "^7.2.2"
   },
   "dependencies": {

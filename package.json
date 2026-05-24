@@ -22,11 +22,13 @@
   "dependencies": {
     "bullmq": "^5.71.0",
     "cors": "^2.8.6",
+    "dompurify": "^3.2.4",
     "dotenv": "^17.3.1",
     "eslint": "^10.0.3",
     "express": "^5.2.1",
     "htmlhint": "^1.9.2",
     "ioredis": "^5.10.0",
+    "monaco-editor": "^0.52.2",
     "pdf-parse": "^1.1.1",
     "pg": "^8.20.0",
     "pg-hstore": "^2.3.4",
@@ -35,7 +37,8 @@
     "puppeteer": "^24.39.0",
     "sequelize": "^6.37.8",
     "stylelint": "^15.11.0",
-    "stylelint-config-standard": "^34.0.0"
+    "stylelint-config-standard": "^34.0.0",
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
