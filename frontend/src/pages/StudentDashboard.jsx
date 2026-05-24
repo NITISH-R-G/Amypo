@@ -319,14 +319,7 @@ export default function StudentDashboard() {
                Live Diagnostics
              </h3>
              <div className="space-y-2">
-                <div className="flex items-start gap-2 bg-emerald-50 text-emerald-700 p-2.5 rounded-lg text-sm border border-emerald-100">
-                  <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
-                  <p>Syntax checks passed. No static analysis errors.</p>
-                </div>
-                <div className="flex items-start gap-2 bg-emerald-50 text-emerald-700 p-2.5 rounded-lg text-sm border border-emerald-100">
-                  <div className="mt-0.5 shrink-0 uppercase font-bold text-[10px] tracking-wider bg-emerald-200 px-1.5 py-0.5 rounded text-emerald-800">TIP</div>
-                  <p>Make sure to check the button hover color contrast.</p>
-                </div>
+                <p className="text-gray-500 italic text-sm">No diagnostics available.</p>
              </div>
            </div>
         </div>

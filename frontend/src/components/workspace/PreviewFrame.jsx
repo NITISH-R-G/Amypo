@@ -27,7 +27,7 @@ export default function PreviewFrame({ html, css, js }) {
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
             <span className="w-2.5 h-2.5 rounded-full bg-green-400"></span>
         </div>
-        <span>localhost:3000/sandbox</span>
+        <span>sandbox.local</span>
       </div>
       <iframe
         ref={iframeRef}
