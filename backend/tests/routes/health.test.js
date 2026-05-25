@@ -1,8 +1,8 @@
 const request = require('supertest');
-const app = require('../app');
+const app = require('../../app');
 
-const { sequelize } = require('../src/models');
-const { closeQueues } = require('../src/services/queueService');
+const { sequelize } = require('../../src/models');
+const { closeQueues } = require('../../src/services/queueService');
 
 describe('Healthcheck Endpoint', () => {
   afterAll(async () => {
