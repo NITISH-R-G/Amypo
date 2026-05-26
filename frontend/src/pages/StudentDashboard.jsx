@@ -313,15 +313,6 @@ export default function StudentDashboard() {
              </div>
            </div>
 
-           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-             <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-               <AlertCircle size={16} className="text-emerald-500" />
-               Live Diagnostics
-             </h3>
-             <div className="space-y-2">
-                <p className="text-gray-500 italic text-sm">No diagnostics available.</p>
-             </div>
-           </div>
         </div>
       </div>
 
