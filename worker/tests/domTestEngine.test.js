@@ -115,4 +115,43 @@ describe('DOM Test Engine', () => {
     expect(results[0].passed).toBe(false);
   });
 
+  it('should evaluate textEquals assertion correctly', async () => {
+    const spec = [{ selector: '#test-div', assertion: 'textEquals', expected: 'Hello World' }];
+    const result = await executeDomTests(mockPage, spec);
+    expect(result).toHaveLength(1);
+    expect(result[0].passed).toBe(true);
+  });
+
+  it('should fail attributeEquals assertion if attribute missing', async () => {
+    const spec = [{ selector: '#test-div', assertion: 'attributeEquals', expected: 'my-data' }];
+    const result = await executeDomTests(mockPage, spec);
+    expect(result).toHaveLength(1);
+    expect(result[0].passed).toBe(false);
+    expect(result[0].hint).toBe('Attribute name is required for attributeEquals');
+  });
+
+  it('should evaluate unsupported assertion', async () => {
+    const spec = [{ selector: '#test-div', assertion: 'unsupported' }];
+    const result = await executeDomTests(mockPage, spec);
+    expect(result).toHaveLength(1);
+    expect(result[0].passed).toBe(false);
+    expect(result[0].hint).toBe('Unsupported DOM assertion: unsupported');
+  });
+
+  it('should evaluate catch block error gracefully', async () => {
+    mockPage.evaluate = jest.fn(async (callback, spec) => {
+      global.document = {
+        querySelectorAll: jest.fn(() => { throw new Error(); })
+      };
+      const result = callback(spec);
+      delete global.document;
+      return result;
+    });
+
+    const spec = [{ selector: 'input[', assertion: 'exists' }];
+    const result = await executeDomTests(mockPage, spec);
+    expect(result).toHaveLength(1);
+    expect(result[0].passed).toBe(false);
+    expect(result[0].hint).toBe('Invalid selector: input[');
+  });
 });
