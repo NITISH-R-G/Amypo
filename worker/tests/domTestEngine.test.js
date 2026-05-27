@@ -14,7 +14,7 @@ describe('DOM Test Engine', () => {
         // we can set them globally in Node for this execution, run the callback, and then unset them.
 
         global.window = {
-            __alerts: [],
+            __alerts: ['test alert'],
         };
 
         const mockElement = {
@@ -94,8 +94,22 @@ describe('DOM Test Engine', () => {
     expect(results[0].passed).toBe(true);
   });
 
+  it('validates alertCalled', async () => {
+    const spec = [{ id: '7', assertion: 'alertCalled' }];
+    const results = await executeDomTests(mockPage, spec);
+    expect(results).toHaveLength(1);
+    expect(results[0].passed).toBe(true);
+  });
+
+  it('validates alertIncludes', async () => {
+    const spec = [{ id: '8', assertion: 'alertIncludes', expected: 'test alert' }];
+    const results = await executeDomTests(mockPage, spec);
+    expect(results).toHaveLength(1);
+    expect(results[0].passed).toBe(true);
+  });
+
   it('returns false for missing element', async () => {
-    const spec = [{ id: '7', selector: '#missing-div', assertion: 'exists' }];
+    const spec = [{ id: '9', selector: '#missing-div', assertion: 'exists' }];
     const results = await executeDomTests(mockPage, spec);
     expect(results).toHaveLength(1);
     expect(results[0].passed).toBe(false);
