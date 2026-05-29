@@ -70,6 +70,39 @@ describe('NotificationHub', () => {
     expect(screen.getByText('Info message.')).toBeInTheDocument();
   });
 
+  it('removes notification after 5 seconds via timeout', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let addNotification;
+
+    const TestComponent = () => {
+      const notifications = useNotifications();
+      addNotification = notifications.addNotification;
+      return null;
+    };
+
+    render(
+      <NotificationProvider>
+        <TestComponent />
+      </NotificationProvider>
+    );
+
+    act(() => {
+      addNotification('success', 'Timeout Test', 'Will disappear');
+    });
+
+    expect(screen.getByText('Timeout Test')).toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Timeout Test')).not.toBeInTheDocument();
+    });
+
+    vi.useRealTimers();
+  });
+
   it('removes notification upon click', async () => {
     let addNotification;
 
