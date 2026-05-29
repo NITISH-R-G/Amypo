@@ -93,16 +93,15 @@ const worker = new Worker('evaluation-queue', async job => {
         'baseline'
       );
 
-      const created = [];
-      for (const vp of (result?.viewports || [])) {
-        const row = await Baseline.create({
-          question_id: Number(questionId),
-          viewport: vp.viewport,
-          reference_image_path: vp.reference_image_path,
-          version
-        });
-        created.push(row);
-      }
+      const baselinesToCreate = (result?.viewports || []).map(vp => ({
+        question_id: Number(questionId),
+        viewport: vp.viewport,
+        reference_image_path: vp.reference_image_path,
+        version
+      }));
+      const created = baselinesToCreate.length > 0
+        ? await Baseline.bulkCreate(baselinesToCreate, { returning: true })
+        : [];
 
       if (job) await job.updateProgress({ stage: 'Baseline complete' });
       console.log(`Baseline generated for question ${questionId} v${version}: ${created.length} viewport(s)`);
