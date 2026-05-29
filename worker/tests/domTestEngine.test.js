@@ -115,11 +115,27 @@ describe('DOM Test Engine', () => {
     expect(results[0].passed).toBe(false);
   });
 
+  it('returns false and sets hint for missing element on non-exists assertion', async () => {
+    const spec = [{ id: '10', selector: '#missing-div', assertion: 'textEquals', expected: 'foo' }];
+    const results = await executeDomTests(mockPage, spec);
+    expect(results).toHaveLength(1);
+    expect(results[0].passed).toBe(false);
+    expect(results[0].hint).toBe('Element not found: #missing-div');
+  });
+
   it('should evaluate textEquals assertion correctly', async () => {
     const spec = [{ selector: '#test-div', assertion: 'textEquals', expected: 'Hello World' }];
     const result = await executeDomTests(mockPage, spec);
     expect(result).toHaveLength(1);
     expect(result[0].passed).toBe(true);
+  });
+
+  it('returns false and sets hint for failed assertion expecting specific value', async () => {
+    const spec = [{ selector: '#test-div', assertion: 'textEquals', expected: 'Goodbye World' }];
+    const result = await executeDomTests(mockPage, spec);
+    expect(result).toHaveLength(1);
+    expect(result[0].passed).toBe(false);
+    expect(result[0].hint).toBe('Expected textEquals to match "Goodbye World" for #test-div');
   });
 
   it('should fail attributeEquals assertion if attribute missing', async () => {

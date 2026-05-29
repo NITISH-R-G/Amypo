@@ -55,7 +55,8 @@ async function executeDomTests(page, domTestSpec) {
             hint = test.hint || `Unsupported DOM assertion: ${assertion}`;
           }
 
-          if (!passed && !hint && needsExpected.has(assertion)) {
+          // We clear default hint if we want a specific error
+          if (!passed && hint === (test.hint || `Failed DOM test for selector: ${test.selector}`) && needsExpected.has(assertion)) {
             hint = `Expected ${assertion} to match "${expected}" for ${test.selector}`;
           }
         }
