@@ -1,4 +1,5 @@
 import React from 'react';
+import DOMPurify from 'dompurify';
 
 export default function QuestionPanel({ question }) {
   if (!question) {
@@ -19,7 +20,7 @@ export default function QuestionPanel({ question }) {
       </div>
       
       <div className="prose prose-indigo max-w-none prose-sm sm:prose-base text-gray-700">
-        <div dangerouslySetInnerHTML={{ __html: question.description }} />
+        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(question.description) }} />
       </div>
 
       {question.requirements && question.requirements.length > 0 && (
