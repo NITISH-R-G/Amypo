@@ -11,8 +11,8 @@ export default function QuestionRoadmap() {
   useEffect(() => {
     const loadRoadmap = async () => {
       try {
-        // Demo/student pages currently use student_id=1. If you add auth later, replace this.
-        const studentId = 1;
+        // Demo/student pages currently use student_id='student_demo'. If you add auth later, replace this.
+        const studentId = 'student_demo';
 
         const [qRes, sRes] = await Promise.all([
           fetch('/api/questions'),

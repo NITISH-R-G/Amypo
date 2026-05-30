@@ -150,7 +150,7 @@ export default function StudentDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question_id: selectedQuestionId,
-          student_id: 1,  // Using Demo Student ID 1
+          student_id: 'student_demo',  // Using Demo Student ID
           html_content: code.html,
           css_content: code.css,
           js_content: code.js

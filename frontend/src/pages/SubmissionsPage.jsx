@@ -21,8 +21,8 @@ export default function SubmissionsPage() {
   const [error, setError] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
 
-  // Demo/student dashboard hardcodes student_id=1 today; mirror it here.
-  const studentId = 1;
+  // Demo/student dashboard hardcodes student_id='student_demo' today; mirror it here.
+  const studentId = 'student_demo';
 
   useEffect(() => {
     let cancelled = false;
