@@ -358,6 +358,11 @@ const getSubmissionResult = async (req, res) => {
     // Persist artifact metadata in DB (local volume storage). This is idempotent.
     // If you later switch to S3, replace these paths with bucket keys.
     try {
+      const existingArtifacts = await Artifact.findAll({ where: { run_id: run.id } });
+      const existingMap = new Map(existingArtifacts.map(a => [String(a.viewport), a]));
+      const toCreate = [];
+      const updatePromises = [];
+
       for (const vt of visualTests) {
         const viewport = String(vt.viewport || '');
         if (!viewport) continue;
@@ -365,7 +370,6 @@ const getSubmissionResult = async (req, res) => {
         const actualFile = `actual_${viewport}.png`;
         const diffFile = `diff_${viewport}.png`;
 
-        const row = await Artifact.findOne({ where: { run_id: run.id, viewport } });
         const next = {
           run_id: run.id,
           viewport,
@@ -374,9 +378,16 @@ const getSubmissionResult = async (req, res) => {
           diff_image_path: fs.existsSync(path.join(runArtifactsDir, diffFile)) ? path.join(String(run.id), diffFile) : null
         };
 
-        if (row) await row.update(next);
-        else await Artifact.create(next);
+        const row = existingMap.get(viewport);
+        if (row) {
+          updatePromises.push(row.update(next));
+        } else {
+          toCreate.push(next);
+        }
       }
+
+      if (updatePromises.length > 0) await Promise.all(updatePromises);
+      if (toCreate.length > 0) await Artifact.bulkCreate(toCreate);
     } catch (_) {
       // Non-fatal: DB persistence shouldn't block showing results.
     }
