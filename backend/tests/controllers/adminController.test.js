@@ -74,6 +74,14 @@ describe('adminController', () => {
       expect(res.json).toHaveBeenCalledWith({ error: 'domain required' });
     });
 
+    it('should return 400 if domain format is invalid', async () => {
+      req.body = { domain: 'invalid_domain' };
+      await addWhitelist(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'invalid domain format' });
+    });
+
     it('should return 201 on successful creation', async () => {
       req.body = { domain: 'newdomain.com' };
       const newDomain = { id: 2, domain: 'newdomain.com' };

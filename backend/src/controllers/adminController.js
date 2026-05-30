@@ -14,6 +14,13 @@ const addWhitelist = async (req, res) => {
   try {
     const { domain } = req.body;
     if (!domain) return res.status(400).json({ error: 'domain required' });
+
+    // Validate domain format to prevent injection/invalid entries
+    const DOMAIN_REGEX = /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i;
+    if (!DOMAIN_REGEX.test(domain)) {
+      return res.status(400).json({ error: 'invalid domain format' });
+    }
+
     const newDomain = await WhitelistDomain.create({ domain });
     res.status(201).json(newDomain);
   } catch (error) {
