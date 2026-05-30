@@ -34,7 +34,6 @@ const submissionController = require('./src/controllers/submissionController');
 const adminRoutes = require('./src/routes/adminRoutes');
 const trainerRoutes = require('./src/routes/trainerRoutes');
 const questionRoutes = require('./src/routes/questionRoutes');
-const aiRoutes = require('./src/routes/aiRoutes');
 
 // Routes will be mounted here
 app.use('/api/submissions', submissionRoutes);
@@ -43,7 +42,6 @@ app.get('/submissions/:id/artifacts/:filename', submissionController.getSubmissi
 app.use('/api/admin', adminRoutes);
 app.use('/api/trainer', trainerRoutes);
 app.use('/api/questions', questionRoutes);
-app.use('/api/ai', aiRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Assessment Engine API is running' });
