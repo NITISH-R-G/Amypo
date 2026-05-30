@@ -1,3 +1,4 @@
+import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { NotificationProvider, useNotifications } from '../components/ui/NotificationHub';
@@ -26,10 +27,11 @@ describe('NotificationHub', () => {
   });
   it('adds an error notification correctly', () => {
     let addNotification;
-
     const TestComponent = () => {
       const notifications = useNotifications();
-      addNotification = notifications.addNotification;
+      React.useEffect(() => {
+        addNotification = notifications.addNotification;
+      }, [notifications]);
       return null;
     };
 
@@ -49,10 +51,11 @@ describe('NotificationHub', () => {
 
   it('adds a generic info notification correctly', () => {
     let addNotification;
-
     const TestComponent = () => {
       const notifications = useNotifications();
-      addNotification = notifications.addNotification;
+      React.useEffect(() => {
+        addNotification = notifications.addNotification;
+      }, [notifications]);
       return null;
     };
 
@@ -73,10 +76,11 @@ describe('NotificationHub', () => {
   it('removes notification after 5 seconds via timeout', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     let addNotification;
-
     const TestComponent = () => {
       const notifications = useNotifications();
-      addNotification = notifications.addNotification;
+      React.useEffect(() => {
+        addNotification = notifications.addNotification;
+      }, [notifications]);
       return null;
     };
 
@@ -105,10 +109,11 @@ describe('NotificationHub', () => {
 
   it('removes notification upon click', async () => {
     let addNotification;
-
     const TestComponent = () => {
       const notifications = useNotifications();
-      addNotification = notifications.addNotification;
+      React.useEffect(() => {
+        addNotification = notifications.addNotification;
+      }, [notifications]);
       return null;
     };
 
