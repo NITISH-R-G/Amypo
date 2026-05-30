@@ -16,8 +16,6 @@ export default function AdminDashboard() {
   const [replayEvents, setReplayEvents] = useState([]);
 
   useEffect(() => {
-    // Demo auth: mark this session as admin so admin-only actions (like replay) are enabled.
-    try { window.localStorage.setItem('amypo_user_id', '2'); } catch (_) {}
     fetchWhitelist();
     fetchLogs();
   }, []);
