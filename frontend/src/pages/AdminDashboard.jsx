@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect} from 'react';
 import axios from 'axios';
 import { RefreshCw, Trash2, Plus, ShieldCheck, PlayCircle, X, Terminal, Globe, ServerCrash } from 'lucide-react';
 import { cn } from '../utils/utils';
@@ -14,6 +14,14 @@ export default function AdminDashboard() {
   const [replayModalOpen, setReplayModalOpen] = useState(false);
   const [activeReplayId, setActiveReplayId] = useState(null);
   const [replayEvents, setReplayEvents] = useState([]);
+
+  const fetchWhitelist = () => {
+    axios.get(`${API_BASE}/whitelist`).then(res => setWhitelist(res.data)).catch(console.error);
+  };
+
+  const fetchLogs = () => {
+    axios.get(`${API_BASE}/logs`).then(res => setLogs(res.data)).catch(console.error);
+  };
 
   useEffect(() => {
     fetchWhitelist();
@@ -53,13 +61,7 @@ export default function AdminDashboard() {
     };
   }, [replayModalOpen, activeReplayId]);
 
-  const fetchWhitelist = async () => {
-    try { const res = await axios.get(`${API_BASE}/whitelist`); setWhitelist(res.data); } catch (e) { console.error(e); }
-  };
 
-  const fetchLogs = async () => {
-    try { const res = await axios.get(`${API_BASE}/logs`); setLogs(res.data); } catch (e) { console.error(e); }
-  };
 
   const addDomain = async () => {
     if (!newDomain) return;
