@@ -44,6 +44,7 @@ describe('trainerController', () => {
   let req, res;
 
   beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
     req = {
       body: {},
       params: {}
@@ -53,6 +54,10 @@ describe('trainerController', () => {
       status: jest.fn().mockReturnThis()
     };
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    console.error.mockRestore();
   });
 
   describe('getQuestionAnalytics', () => {

@@ -15,6 +15,14 @@ export default function AdminDashboard() {
   const [activeReplayId, setActiveReplayId] = useState(null);
   const [replayEvents, setReplayEvents] = useState([]);
 
+  async function fetchWhitelist() {
+    try { const res = await axios.get(`${API_BASE}/whitelist`); setWhitelist(res.data); } catch (e) { console.error(e); }
+  }
+
+  async function fetchLogs() {
+    try { const res = await axios.get(`${API_BASE}/logs`); setLogs(res.data); } catch (e) { console.error(e); }
+  }
+
   useEffect(() => {
     fetchWhitelist();
     fetchLogs();
@@ -52,14 +60,6 @@ export default function AdminDashboard() {
       if (eventSource) eventSource.close();
     };
   }, [replayModalOpen, activeReplayId]);
-
-  const fetchWhitelist = async () => {
-    try { const res = await axios.get(`${API_BASE}/whitelist`); setWhitelist(res.data); } catch (e) { console.error(e); }
-  };
-
-  const fetchLogs = async () => {
-    try { const res = await axios.get(`${API_BASE}/logs`); setLogs(res.data); } catch (e) { console.error(e); }
-  };
 
   const addDomain = async () => {
     if (!newDomain) return;
