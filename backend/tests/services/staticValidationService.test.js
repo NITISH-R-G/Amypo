@@ -100,5 +100,27 @@ test();
       expect(result.summary.totalErrors).toBe(result.summary.html.errors + result.summary.css.errors + result.summary.js.errors);
       expect(result.summary.totalWarnings).toBe(result.summary.html.warnings + result.summary.css.warnings + result.summary.js.warnings);
     });
+
+    it('should handle stylelint exception gracefully', async () => {
+      const stylelint = require('stylelint');
+      jest.spyOn(stylelint, 'lint').mockRejectedValueOnce(new Error('Mocked stylelint error'));
+      const result = await staticValidationService.validateSetup('', 'body { color: red; }', '');
+      expect(result.isValid).toBe(false);
+      expect(result.css.some(e => e.message === 'Mocked stylelint error')).toBe(true);
+      expect(result.summary.css.errors).toBe(1);
+    });
+
+    it('should generate warnings for JS code', async () => {
+       const jsCode = `
+          let a = 1;
+          if (a == 1) { // eqeqeq warning
+             // do something
+          }
+       `;
+       const result = await staticValidationService.validateSetup('', '', jsCode);
+       expect(result.isValid).toBe(true);
+       expect(result.summary.js.warnings).toBeGreaterThan(0);
+       expect(result.js.some(e => e.ruleId === 'eqeqeq')).toBe(true);
+    });
   });
 });
