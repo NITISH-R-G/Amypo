@@ -1,40 +1,41 @@
 # Repository Health Report
-- **Strengths:** Robust modular structure, strong test basis for new features, sandboxed evaluation engine with Puppeteer. Now improved with expansive backend controller/service test coverage.
-- **Weaknesses:** Remaining uncovered branches in less-critical backend files and components in worker, though improving sprint by sprint.
-- **Risks:** Continued risk of regressions if future backend feature work isn't test-driven.
-- **Opportunities:** Improve testing coverage for the worker engine and specific edge cases in the submission evaluation logic.
+- **Strengths:** High backend test coverage overall, robust isolated worker testing environment. Monorepo architecture facilitates structured separation of concerns.
+- **Weaknesses:** Missing unit tests for the `backend/src/services/queueService.js`, which interfaces with the message queue system powering evaluation orchestration. Frontend is severely lacking test coverage across components.
+- **Risks:** Uncovered edge cases and queue connection failures could break submission processing entirely. Lacking test coverage could prevent detection of regressions in message queue configuration.
+- **Opportunities:** Completing backend service coverage by targeting `queueService.js`. Then, expand frontend test coverage to bring UI components up to standards.
 
 # Competitor Analysis
-- **Repositories analyzed:** LeetCode, CodeSignal, HackerRank.
-- **Advantages discovered:** Battle-tested, scalable backend orchestration ensuring consistent reliability under load.
-- **Gaps identified:** Our backend lacked comprehensive unit test suites for `baselineGenerationService` and `submissionController`, critical pieces of the evaluation engine.
-- **Opportunities to outperform:** Providing an ultra-stable local development testing environment and reliable submission flows that match enterprise standards.
+- **Repositories analyzed:** LeetCode, HackerRank, CodeSignal.
+- **Advantages discovered:** Stable queue architectures with high concurrency thresholds and robust test coverage.
+- **Gaps identified:** Our test suite lacked coverage on the primary integration layer between the application and the Redis evaluation queues.
+- **Opportunities to outperform:** Providing comprehensive tests that span not only queue submissions but replay runs and explicit baseline job triggers.
 
 # Priority Improvements
-1. **Highest impact:** Add tests for `backend/src/services/baselineGenerationService.js` and `backend/src/controllers/submissionController.js`.
-2. **Lowest complexity:** Writing isolated tests with mocked databases and services using Jest.
-3. **Strategic importance:** Ensures that critical baseline logic (which seeds tests for students) and core submission logic (which evaluates code) are reliable and less prone to regressions.
+1. **Highest impact:** Add test coverage to `queueService.js` to ensure the asynchronous evaluation and baseline logic behaves predictably.
+2. **Lowest complexity:** Use Jest mocks to simulate `bullmq`'s `Queue` and `QueueEvents` logic without needing an actual Redis container.
+3. **Strategic importance:** Solidifying the test suite for core infrastructural services clears the path to moving onto frontend test expansion.
 
 # Sprint Plan
-- **Sprint goal:** Increase backend test coverage by writing test suites for the submission controller and baseline generation service.
+- **Sprint goal:** Improve backend codebase reliability by creating a unit test suite for the `queueService.js`.
 - **Tasks:**
-  1. Add tests for `backend/src/services/baselineGenerationService.js`.
-  2. Add tests for `backend/src/controllers/submissionController.js`.
-- **Implementation roadmap:** Create `.test.js` files in `backend/tests/services/` and `backend/tests/controllers/`, mocking `fs`, `path`, and database models (`Baseline`, `Submission`, `Question`, `EvaluationRun`, `Artifact`, `User`, `TestSpec`) as well as services (`staticValidationService`, `queueService`, `streakManager`).
-- **Expected outcomes:** Higher backend test coverage and stable code submission flows.
+  1. Create `backend/tests/services/queueService.test.js`.
+  2. Implement tests targeting `enqueueEvaluation`, `enqueueBaseline`, and queue closures (`closeQueues`).
+  3. Ensure that the test suite runs correctly and improves the file's coverage from ~48% to >90%.
+- **Implementation roadmap:** Define Jest mocks for the `bullmq` package specifically tailoring `Queue` and `QueueEvents` to mock `add`, `close`, `on`, and `off` functions. Then, assert the parameters passed into `add` are correctly formatted with the given inputs.
+- **Expected outcomes:** `queueService.js` line coverage drastically increases, ensuring our message queue configuration logic is sound and regression-resistant.
 
 # Technical Improvements
 - **Architecture:** N/A this cycle.
 - **Performance:** N/A this cycle.
 - **Scalability:** N/A this cycle.
 - **Security:** N/A this cycle.
-- **Testing:** Added robust unit tests for `baselineGenerationService.js` (testing fallback and explicit specs, fs resolution) and `submissionController.js` (testing code submission, validation fails, replay evaluations, SSE streams, result and artifact retrieval).
-- **Documentation:** Updated output.md to reflect these testing updates.
-- **DevOps:** N/A this cycle.
+- **Testing:** Added 10 tests within `queueService.test.js` validating missing submission IDs, running queue evaluations with specific IDs, testing fallback baseline versions, and testing queue disconnections. Coverage of `queueService.js` improved from ~48.48% statements to ~90.9% statements.
+- **Documentation:** Updated output.md and test suites documented correctly.
+- **DevOps:** Enhanced the reliability of the continuous integration test checks by asserting queue interactions.
 
 # Metrics Improved
-- Added 2 new test files (`baselineGenerationService.test.js`, `submissionController.test.js`).
-- Added 30 new test cases.
-- Backend test count increased from 73 to 103 tests.
-- `baselineGenerationService.js` coverage increased to ~100% Stmts.
-- `submissionController.js` coverage increased from ~8.06% to ~63.3% Stmts.
+- 1 new test file (`queueService.test.js`).
+- 10 new test assertions.
+- Total backend tests increased from 103 to 113.
+- `queueService.js` line coverage improved from 53.33% to 90.00%.
+- Overall backend statement coverage increased from 85.39% to 87.04%.
