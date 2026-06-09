@@ -1,18 +1,19 @@
 const aiService = require('../services/aiService');
 
 const fixCode = async (req, res) => {
-  const { html, css, js, prompt } = req.body;
+  const { html, css, js } = req.body;
 
   try {
-    const { fixedCode, explanation } = await aiService.simulateAiFix(html, css, js, prompt);
+    const { fixedCode, explanation } = await aiService.simulateAiFix(html, css, js);
 
-    res.json({
+    return res.json({
       success: true,
       fixedCode,
       explanation
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to process AI code fix' });
+    console.error('AI code fix error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to process AI code fix' });
   }
 };
 
