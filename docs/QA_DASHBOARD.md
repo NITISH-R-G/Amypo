@@ -1,0 +1,12 @@
+# AI QA Analysis Report
+
+## Synthetic Scores
+
+- **Code Quality Score:** 70/100
+- **Security Score:** 77/100
+- **Maintainability Score:** 75.08/100
+
+## AI Insights & Recommendations
+
+AI analysis skipped due to missing API key.
+
