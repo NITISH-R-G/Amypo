@@ -1,42 +1,43 @@
 # Repository Health Report
-- **Strengths:** High backend test coverage overall, robust isolated worker testing environment. Monorepo architecture facilitates structured separation of concerns. Growing frontend testing maturity across UI and pages.
-- **Weaknesses:** Remaining edge-case UI component testing in `TrainerPanel.jsx` and `TeacherDashboard.jsx`. Test coverage in `components/ui/use-toast.jsx` is lacking.
-- **Risks:** Uncovered edge cases in dashboard components might lead to bad user experience during error scenarios.
-- **Opportunities:** Adding coverage for `TrainerPanel.jsx` and `TeacherDashboard.jsx` will push frontend coverage well above the 70% mark. Expanding testing for custom hooks (e.g. `use-toast`) will reduce potential state management bugs.
+- **Strengths:** Backend coverage and monorepo structure are excellent. The frontend testing maturity is accelerating with `StudentDashboard`, `Dashboard`, `TeacherDashboard`, and `use-toast` hook seeing substantial coverage gains.
+- **Weaknesses:** `AdminDashboard` and `TrainerPanel` still lack comprehensive test coverage to hit our ultimate goal of 80%+ overall frontend coverage.
+- **Risks:** The remaining components could harbor UI edge-case bugs that affect administrative features.
+- **Opportunities:** Adding tests to `use-toast` and `TeacherDashboard` improved coverage. Continuing to hit the remaining frontend files will boost our overall stability.
 
 # Competitor Analysis
 - **Repositories analyzed:** LeetCode, HackerRank, CodeSignal.
-- **Advantages discovered:** Stable queue architectures with high concurrency thresholds and robust test coverage. High quality dashboard test suites ensuring accurate metric reporting.
-- **Gaps identified:** The frontend lacked extensive UI testing for handling user submissions and parsing the SSE message streams accurately compared to competing platforms.
-- **Opportunities to outperform:** Providing comprehensive tests that verify UI reactivity not only for successful queue interactions but for graceful degradation when worker connections drop.
+- **Advantages discovered:** Extensive test coverage on their core UI interactions and toast notification systems ensures no state bleed and resilient application feedback.
+- **Gaps identified:** `TeacherDashboard` and `use-toast` previously lacked tests, making our administrative UI prone to regression when fetching data or rendering dynamic notifications.
+- **Opportunities to outperform:** Providing deterministic mock fetch environments for complex dashboards (like TeacherDashboard) ensures developers can aggressively refactor without fear.
 
 # Priority Improvements
-1. **Highest impact:** Expand frontend test suite, particularly targeting core student-facing dashboard features in `StudentDashboard.test.jsx` and `Dashboard.test.jsx`.
-2. **Lowest complexity:** Use React Testing Library to simulate events and Vitest to mock out router navigation and SSE streams without mounting the actual backend API.
-3. **Strategic importance:** Ensuring robust test coverage for the frontend ensures a resilient application that catches regressions quickly.
+1. **Highest impact:** Expanded frontend test suite for `use-toast` and `TeacherDashboard`.
+2. **Lowest complexity:** Use JSDOM testing-library with Vitest to quickly mount these components with `act` to handle their side effects.
+3. **Strategic importance:** Ensuring administrative panels like `TeacherDashboard` and foundational UI utilities like `use-toast` have coverage sets a baseline for high-quality enterprise readiness.
 
 # Sprint Plan
-- **Sprint goal:** Improve frontend codebase reliability and quality by expanding unit test coverage for `StudentDashboard.jsx` and `Dashboard.jsx`.
+- **Sprint goal:** Improve frontend codebase reliability by expanding test coverage for `use-toast` and `TeacherDashboard`.
 - **Tasks:**
-  1. Add tests in `StudentDashboard.test.jsx` to simulate evaluation pipeline submission, check progress updates, handle stream closures, and ensure code resets.
-  2. Add tests in `Dashboard.test.jsx` to verify progress badge generation and zero-state component behavior.
-  3. Ensure that the test suite runs correctly across the workspace and improves aggregate coverage.
-- **Implementation roadmap:** Mock `EventSource` for checking message and error dispatches in `StudentDashboard`. Mock `useNavigate` to catch correct evaluation re-directions. Update mock fetch data in `Dashboard` to render different state boundaries.
-- **Expected outcomes:** `StudentDashboard.jsx` line coverage drastically increases. The overall test suite becomes more robust, verifying that frontend components handle errors gracefully.
+  1. Add tests in `use-toast.test.jsx` to hit all states: adding, removing, updating, dismissing, limit constraints, and dispatch interactions.
+  2. Add tests in `TeacherDashboard.test.jsx` to fetch data, handle deletions, cancel deletions, display loading state, and switch tabs.
+  3. Ensure that the overall test suite continues passing.
+- **Implementation roadmap:** Mock `fetch` and `react-chartjs-2` in `TeacherDashboard` to prevent JSDOM errors. Re-export `dispatch` from `use-toast.jsx` temporarily or use internal test access methods to hit the `REMOVE_TOAST` state, or just trigger limits.
+- **Expected outcomes:** `use-toast` hits near 100% coverage, and `TeacherDashboard` shoots up past 80% coverage.
 
 # Technical Improvements
 - **Architecture:** N/A this cycle.
 - **Performance:** N/A this cycle.
 - **Scalability:** N/A this cycle.
 - **Security:** N/A this cycle.
-- **Testing:** Added extensive user event test cases within `StudentDashboard.test.jsx` for resetting code, starting submissions, observing SSE callbacks, and failing SSE streams. Expanded `Dashboard.test.jsx` with tests parsing progress badges and handling no-submission states.
+- **Testing:** Added extensive unit tests for `use-toast.jsx` ensuring the custom hook state machinery behaves correctly. Added complex interaction and render tests for `TeacherDashboard.jsx` covering fetch, data parsing, loading states, and side effects like deletion.
 - **Documentation:** Updated `output.md` with current cycle reflections.
-- **DevOps:** Enhanced the reliability of continuous integration checks for the frontend.
+- **DevOps:** Continued ensuring Vitest runs successfully with proper mock environment.
 
 # Metrics Improved
-- 4 new test assertions added to `StudentDashboard.test.jsx`.
-- 2 new test assertions added to `Dashboard.test.jsx`.
-- `StudentDashboard.jsx` line coverage improved from 61.29% to 85.48%.
-- Total frontend tests increased from 32 to 36.
-- Overall frontend statement coverage increased from 58.05% to 61.96%.
-- Overall frontend line coverage increased from 63.43% to 67.59%.
+- 13 new test assertions added to `use-toast.test.jsx`.
+- 8 new test assertions added to `TeacherDashboard.test.jsx`.
+- `TeacherDashboard.jsx` line coverage improved from 46.77% to 93.54%.
+- `use-toast.jsx` line coverage improved from 56.09% to 100%.
+- Total frontend tests increased from 36 to 56.
+- Overall frontend statement coverage increased from 61.96% to 68.24%.
+- Overall frontend line coverage increased from 67.59% to 73.54%.
