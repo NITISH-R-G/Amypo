@@ -137,45 +137,24 @@ describe('useToast hook and Toaster', () => {
     expect(result.current.toasts[0].open).toBe(true);
   });
 
-  it('should handle REMOVE_TOAST via dispatch', () => {
-    act(() => {
-      dispatch({ type: 'REMOVE_TOAST' });
-    });
-
+  const runRemoveToastTest = (toastCalls, dispatchAction, expectedLenBefore, expectedLenAfter) => {
+    act(() => { dispatch({ type: 'REMOVE_TOAST' }); });
     const { result } = renderHook(() => useToast());
-    let id;
+    let lastId;
     act(() => {
-      const t = toast({ title: 'Test Toast' });
-      id = t.id;
+      toastCalls.forEach(t => { lastId = toast(t).id; });
     });
+    expect(result.current.toasts).toHaveLength(expectedLenBefore);
+    act(() => { dispatch(typeof dispatchAction === 'function' ? dispatchAction(lastId) : dispatchAction); });
+    expect(result.current.toasts).toHaveLength(expectedLenAfter);
+  };
 
-    expect(result.current.toasts).toHaveLength(1);
-
-    act(() => {
-      dispatch({ type: 'REMOVE_TOAST', toastId: id });
-    });
-
-    expect(result.current.toasts).toHaveLength(0);
+  it('should handle REMOVE_TOAST via dispatch', () => {
+    runRemoveToastTest([{ title: 'Test Toast' }], (id) => ({ type: 'REMOVE_TOAST', toastId: id }), 1, 0);
   });
 
   it('should handle REMOVE_TOAST without id via dispatch', () => {
-    act(() => {
-      dispatch({ type: 'REMOVE_TOAST' });
-    });
-
-    const { result } = renderHook(() => useToast());
-    act(() => {
-      toast({ title: 'Test Toast 1' });
-      toast({ title: 'Test Toast 2' });
-    });
-
-    expect(result.current.toasts).toHaveLength(2);
-
-    act(() => {
-      dispatch({ type: 'REMOVE_TOAST' });
-    });
-
-    expect(result.current.toasts).toHaveLength(0);
+    runRemoveToastTest([{ title: 'Test Toast 1' }, { title: 'Test Toast 2' }], { type: 'REMOVE_TOAST' }, 2, 0);
   });
 
   it('should render Toaster component with toasts', () => {
