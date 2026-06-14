@@ -61,6 +61,7 @@ async function executeDomTests(page, domTestSpec) {
           }
         }
       } catch (e) {
+
         hint = `Invalid selector: ${test.selector}`;
       }
       return { 
