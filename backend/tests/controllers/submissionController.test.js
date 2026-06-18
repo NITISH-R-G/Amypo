@@ -250,6 +250,40 @@ describe('SubmissionController', () => {
       await getSubmissionResult(req, res);
       expect(res.json).toHaveBeenCalled();
     });
+
+    it('should fall back to Artifacts table when visual_artifacts is empty', async () => {
+      User.findByPk.mockResolvedValue({ id: '1', role: 'student' });
+      req.params.id = '1';
+      Submission.findByPk.mockResolvedValue({ id: 1, student_id: '1', status: 'completed' });
+
+      const mockArtifacts = [
+        {
+          viewport: 'desktop',
+          expected_image_path: 'expected.png',
+          actual_image_path: 'actual.png',
+          diff_image_path: 'diff.png'
+        }
+      ];
+
+      EvaluationRun.findOne.mockResolvedValue({
+        id: 1,
+        submission_id: 1,
+        visual_artifacts: [],
+        Artifacts: mockArtifacts
+      });
+
+      await getSubmissionResult(req, res);
+
+      expect(res.json).toHaveBeenCalled();
+      const responseData = res.json.mock.calls[0][0];
+
+      expect(responseData.visualTests).toBeDefined();
+      expect(responseData.visualTests.length).toBe(1);
+      expect(responseData.visualTests[0].viewport).toBe('desktop');
+      expect(responseData.visualTests[0].expected).toContain('expected.png');
+      expect(responseData.visualTests[0].actual).toContain('actual.png');
+      expect(responseData.visualTests[0].diff).toContain('diff.png');
+    });
   });
 
   describe('getSubmissionArtifact', () => {
