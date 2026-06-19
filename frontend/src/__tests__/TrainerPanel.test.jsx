@@ -105,29 +105,10 @@ describe('TrainerPanel', () => {
   });
 
   it('triggers worker evaluation via UI button', async () => {
-    global.fetch = vi.fn((url, options) => {
-      if (url.includes('/api/questions')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ questions: [{ id: 1, title: 'Question 1', description: 'Desc 1' }] })
-        });
-      }
-      if (url.includes('/api/trainer/questions/1/draft')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
-            question: { id: 1, title: 'Question 1', description: 'Desc 1', allowed_libraries: [] },
-            files: [],
-            testSpec: {}
-          })
-        });
-      }
-      if (url.includes('/api/questions/1/baseline')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ message: 'Baseline task queued' })
-        });
-      }
+    global.fetch.mockImplementation((url) => {
+      if (url.includes('/api/questions')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ questions: [{ id: 1, title: 'Question 1', description: 'Desc 1' }] }) });
+      if (url.includes('/api/trainer/questions/1/draft')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ question: { id: 1, title: 'Question 1', description: 'Desc 1', allowed_libraries: [] }, files: [], testSpec: {} }) });
+      if (url.includes('/api/questions/1/baseline')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Baseline task queued' }) });
       return Promise.reject(new Error('not found: ' + url));
     });
 
@@ -149,28 +130,11 @@ describe('TrainerPanel', () => {
   });
 
   it('handles save API failure gracefully', async () => {
-    global.fetch = vi.fn((url, options) => {
-      if (url.includes('/api/questions')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ questions: [{ id: 1, title: 'Question 1', description: 'Desc 1' }] })
-        });
-      }
+    global.fetch.mockImplementation((url, options) => {
+      if (url.includes('/api/questions')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ questions: [{ id: 1, title: 'Question 1', description: 'Desc 1' }] }) });
       if (url.includes('/api/trainer/questions/1/draft')) {
-        if (options && options.method === 'PUT') {
-          return Promise.resolve({
-            ok: false,
-            json: () => Promise.resolve({ error: 'Server error' })
-          });
-        }
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
-            question: { id: 1, title: 'Question 1', description: 'Desc 1', allowed_libraries: [] },
-            files: [],
-            testSpec: {}
-          })
-        });
+        if (options && options.method === 'PUT') return Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'Server error' }) });
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ question: { id: 1, title: 'Question 1', description: 'Desc 1', allowed_libraries: [] }, files: [], testSpec: {} }) });
       }
       return Promise.reject(new Error('not found: ' + url));
     });
