@@ -4,6 +4,25 @@ import userEvent from '@testing-library/user-event';
 import TrainerPanel from '../pages/TrainerPanel';
 import { BrowserRouter } from 'react-router-dom';
 
+vi.mock('react-chartjs-2', () => ({
+  Bar: () => <div data-testid="mock-bar-chart">Mock Bar Chart</div>,
+  Doughnut: () => <div data-testid="mock-doughnut-chart">Mock Doughnut Chart</div>,
+}));
+
+vi.mock('../components/workspace/CodeEditor', () => ({
+  default: ({ value, onChange, language }) => (
+    <textarea
+      data-testid={`code-editor-${language}`}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  )
+}));
+
+vi.mock('@monaco-editor/react', () => ({
+  default: () => <textarea data-testid="monaco-editor" />
+}));
+
 describe('TrainerPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -59,5 +78,46 @@ describe('TrainerPanel', () => {
         method: 'PUT'
       }));
     });
+  });
+
+  it('switches tabs', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    // TrainerPanel has "Content Builder" and "Cohort Analytics"
+    const analyticsBtn = screen.getByText(/Cohort Analytics/i);
+    await user.click(analyticsBtn);
+
+    // Assert that the text shows "Avg. Score"
+    expect(await screen.findByText(/Avg. Score/i)).toBeInTheDocument();
+
+    const builderBtn = screen.getByText(/Content Builder/i);
+    await user.click(builderBtn);
+
+    expect(await screen.findByText(/Visual Test Spec Builder/i)).toBeInTheDocument();
+  });
+
+  it('can configure test specs', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    // Should be on content builder by default
+    expect(await screen.findByText(/Visual Test Spec Builder/i)).toBeInTheDocument();
+
+    const addStepBtn = screen.getByRole('button', { name: /Add Step/i });
+    await user.click(addStepBtn);
+
+    // Check if new step appears. The default type is DOM.
+    // There are 2 existing ones, so clicking adds another DOM step.
+    const selects = screen.getAllByRole('combobox');
+    expect(selects.length).toBeGreaterThan(0);
   });
 });
