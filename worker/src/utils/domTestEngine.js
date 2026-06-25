@@ -17,6 +17,11 @@ async function executeDomTests(page, domTestSpec) {
       'alertIncludes'
     ]);
 
+    const getRandomId = () => {
+         const uint32 = window.crypto.getRandomValues(new Uint32Array(1))[0];
+         return uint32.toString(16);
+    }
+
     return spec.map(test => {
       let passed = false;
       let hint = test.hint || `Failed DOM test for selector: ${test.selector}`;
@@ -55,16 +60,17 @@ async function executeDomTests(page, domTestSpec) {
             hint = test.hint || `Unsupported DOM assertion: ${assertion}`;
           }
 
-          // We clear default hint if we want a specific error
           if (!passed && hint === (test.hint || `Failed DOM test for selector: ${test.selector}`) && needsExpected.has(assertion)) {
             hint = `Expected ${assertion} to match "${expected}" for ${test.selector}`;
           }
         }
       } catch (e) {
+        console.error(e);
         hint = `Invalid selector: ${test.selector}`;
       }
+
       return { 
-        testId: test.id || Math.random().toString(36).substr(2, 9), 
+        testId: test.id || getRandomId(),
         passed, 
         hint, 
         selector: test.selector 

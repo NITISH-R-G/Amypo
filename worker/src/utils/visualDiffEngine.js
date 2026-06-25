@@ -4,28 +4,21 @@ const pixelmatchImport = require('pixelmatch');
 
 const pixelmatch = pixelmatchImport.default || pixelmatchImport;
 
-function generateVisualDiff(expectedPath, actualPath, diffPath) {
-  let img1 = null;
-  let img2 = null;
-  let diff = null;
-  let normalized1 = null;
-  let normalized2 = null;
-
-  try {
-    img1 = PNG.sync.read(fs.readFileSync(expectedPath));
-    img2 = PNG.sync.read(fs.readFileSync(actualPath));
+function getNormalizedImages(expectedPath, actualPath) {
+    const img1 = PNG.sync.read(fs.readFileSync(expectedPath));
+    const img2 = PNG.sync.read(fs.readFileSync(actualPath));
 
     const width = Math.max(img1.width, img2.width);
     const height = Math.max(img1.height, img2.height);
 
-    normalized1 = new PNG({
+    const normalized1 = new PNG({
       width,
       height,
       colorType: 6,
       inputHasAlpha: true
     });
 
-    normalized2 = new PNG({
+    const normalized2 = new PNG({
       width,
       height,
       colorType: 6,
@@ -38,7 +31,11 @@ function generateVisualDiff(expectedPath, actualPath, diffPath) {
     PNG.bitblt(img1, normalized1, 0, 0, img1.width, img1.height, 0, 0);
     PNG.bitblt(img2, normalized2, 0, 0, img2.width, img2.height, 0, 0);
 
-    diff = new PNG({
+    return { normalized1, normalized2, width, height };
+}
+
+function processDiffAndHotspots(normalized1, normalized2, width, height, diffPath) {
+    const diff = new PNG({
       width,
       height,
       colorType: 6,
@@ -170,6 +167,14 @@ function generateVisualDiff(expectedPath, actualPath, diffPath) {
       };
     });
 
+    return { numDiffPixels, hotspots };
+}
+
+function generateVisualDiff(expectedPath, actualPath, diffPath) {
+  try {
+    const { normalized1, normalized2, width, height } = getNormalizedImages(expectedPath, actualPath);
+    const { numDiffPixels, hotspots } = processDiffAndHotspots(normalized1, normalized2, width, height, diffPath);
+
     return {
       numDiffPixels,
       diffPercentage: (numDiffPixels / (width * height)) * 100,
@@ -178,11 +183,7 @@ function generateVisualDiff(expectedPath, actualPath, diffPath) {
       height
     };
   } finally {
-    img1 = null;
-    img2 = null;
-    diff = null;
-    normalized1 = null;
-    normalized2 = null;
+      // Node gc handles it
   }
 }
 
