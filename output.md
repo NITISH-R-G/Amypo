@@ -16,27 +16,26 @@
 3. **Strategic importance:** Ensuring robust test coverage for the frontend ensures a resilient application that catches regressions quickly.
 
 # Sprint Plan
-- **Sprint goal:** Improve frontend codebase reliability and quality by expanding unit test coverage for `StudentDashboard.jsx` and `Dashboard.jsx`.
+- **Sprint goal:** Improve frontend codebase reliability and quality by expanding unit test coverage for `TrainerPanel.jsx`, `TeacherDashboard.jsx`, and `use-toast.jsx`.
 - **Tasks:**
-  1. Add tests in `StudentDashboard.test.jsx` to simulate evaluation pipeline submission, check progress updates, handle stream closures, and ensure code resets.
-  2. Add tests in `Dashboard.test.jsx` to verify progress badge generation and zero-state component behavior.
-  3. Ensure that the test suite runs correctly across the workspace and improves aggregate coverage.
-- **Implementation roadmap:** Mock `EventSource` for checking message and error dispatches in `StudentDashboard`. Mock `useNavigate` to catch correct evaluation re-directions. Update mock fetch data in `Dashboard` to render different state boundaries.
-- **Expected outcomes:** `StudentDashboard.jsx` line coverage drastically increases. The overall test suite becomes more robust, verifying that frontend components handle errors gracefully.
+  1. Add tests in `TrainerPanel.test.jsx` to simulate adding/removing test assertions and steps, saving drafts, selecting questions, and toggling tabs.
+  2. Add tests in `TeacherDashboard.test.jsx` to verify switching between tabs, loading analytics, and handling question deletions.
+  3. Expand coverage for `use-toast.jsx` by verifying `dispatch` and `memoryState` clearing in teardown blocks and covering limits.
+- **Implementation roadmap:** Mock `ResizeObserver` and `window.HTMLElement.prototype.scrollIntoView`. Export `dispatch` from `use-toast.jsx` to test module-level state. Ensure deterministic waiting so that UI interaction expectations do not fail silently on errors.
+- **Expected outcomes:** Overall frontend statement and line coverage will greatly increase above 65%.
 
 # Technical Improvements
-- **Architecture:** N/A this cycle.
+- **Architecture:** Exported `dispatch` from `use-toast.jsx` to improve unit testability of module-level state.
 - **Performance:** N/A this cycle.
 - **Scalability:** N/A this cycle.
 - **Security:** N/A this cycle.
-- **Testing:** Added extensive user event test cases within `StudentDashboard.test.jsx` for resetting code, starting submissions, observing SSE callbacks, and failing SSE streams. Expanded `Dashboard.test.jsx` with tests parsing progress badges and handling no-submission states.
+- **Testing:** Added 4 new test cases for `use-toast`, 5 new test cases for `TrainerPanel`, and 3 new test cases for `TeacherDashboard`, pushing coverage up significantly while ensuring assertions are evaluated cleanly with appropriate waits and assertions.
 - **Documentation:** Updated `output.md` with current cycle reflections.
-- **DevOps:** Enhanced the reliability of continuous integration checks for the frontend.
+- **DevOps:** Enhanced the reliability of continuous CI checks for the frontend test suite.
 
 # Metrics Improved
-- 4 new test assertions added to `StudentDashboard.test.jsx`.
-- 2 new test assertions added to `Dashboard.test.jsx`.
-- `StudentDashboard.jsx` line coverage improved from 61.29% to 85.48%.
-- Total frontend tests increased from 32 to 36.
-- Overall frontend statement coverage increased from 58.05% to 61.96%.
-- Overall frontend line coverage increased from 63.43% to 67.59%.
+- `use-toast.jsx` lines coverage improved from ~56% to 85.36%.
+- `TrainerPanel.jsx` lines coverage improved from ~58% to 67.08%.
+- `TeacherDashboard.jsx` lines coverage improved from ~62% to 67.74%.
+- Total frontend tests increased from 36 to 49.
+- Overall frontend line coverage increased from 67.59% to 72.43%.
