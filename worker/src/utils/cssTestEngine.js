@@ -28,9 +28,10 @@ async function executeCssTests(page, cssTestSpec) {
       return normalizedActual === expected;
     };
 
-    const getRandomId = () => {
-         const uint32 = window.crypto.getRandomValues(new Uint32Array(1))[0];
-         return uint32.toString(16);
+    let currentId = Date.now();
+    const getId = () => {
+         currentId++;
+         return currentId.toString(16);
     }
 
     return spec.map(test => {
@@ -73,7 +74,7 @@ async function executeCssTests(page, cssTestSpec) {
       }
 
       return { 
-        testId: test.id || getRandomId(),
+        testId: test.id || getId(),
         passed, 
         hint, 
         selector: test.selector 

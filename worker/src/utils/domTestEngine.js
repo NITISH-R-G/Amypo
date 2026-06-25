@@ -17,9 +17,11 @@ async function executeDomTests(page, domTestSpec) {
       'alertIncludes'
     ]);
 
-    const getRandomId = () => {
-         const uint32 = window.crypto.getRandomValues(new Uint32Array(1))[0];
-         return uint32.toString(16);
+    // Simple id generator for frontend tests without using crypto or math.random
+    let currentId = Date.now();
+    const getId = () => {
+         currentId++;
+         return currentId.toString(16);
     }
 
     return spec.map(test => {
@@ -70,7 +72,7 @@ async function executeDomTests(page, domTestSpec) {
       }
 
       return { 
-        testId: test.id || getRandomId(),
+        testId: test.id || getId(),
         passed, 
         hint, 
         selector: test.selector 
