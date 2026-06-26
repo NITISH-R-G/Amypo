@@ -4,3 +4,7 @@
 .git
 .env
 npm-debug.log
+
+# coverage/reports
+reports/
+coverage/
