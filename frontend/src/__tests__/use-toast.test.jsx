@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { useToast, toast, Toaster, dispatchForTest } from '../components/ui/use-toast';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 // A wrapper to clean up state between tests
 const TestWrapper = ({ children }) => {
@@ -14,13 +14,13 @@ const TestWrapper = ({ children }) => {
       dispatchForTest({ type: "REMOVE_TOAST" });
       cleared.current = true;
     }
-  }, []);
+  }, [dismiss]);
 
   return <>{children}</>;
 };
 
 const TestComponent = () => {
-  const { toast, dismiss, toasts } = useToast();
+  const { toasts, dismiss } = useToast();
 
   return (
     <div>

@@ -29,10 +29,14 @@ function dispatch(action) {
   })
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function dispatchForTest(action) {
-  if (process.env.NODE_ENV === 'test') {
+  /* v8 ignore start */
+  // eslint-disable-next-line no-undef
+  if ((typeof process !== 'undefined' && process.env.NODE_ENV === 'test') || import.meta.env?.MODE === 'test') {
     dispatch(action);
   }
+  /* v8 ignore stop */
 }
 
 function reducer(state, action) {
@@ -152,4 +156,5 @@ function Toaster() {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { useToast, toast, Toaster }
