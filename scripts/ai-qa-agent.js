@@ -116,9 +116,12 @@ function calculateScores(data) {
     securityScore -= Math.min(vulnPenalty, 40);
   }
 
-  const hasSecrets = data.secretlint && data.secretlint.some(file => file.messages && file.messages.length > 0);
-  if (hasSecrets) {
-    securityScore -= 50; // Heavy penalty for secrets
+  const secretlintData = data.secretlint;
+  if (secretlintData) {
+    const hasSecrets = secretlintData.some(file => file.messages && file.messages.length > 0);
+    if (hasSecrets) {
+      securityScore -= 50; // Heavy penalty for secrets
+    }
   }
 
   return {
@@ -151,7 +154,7 @@ async function analyzeWithAI(reportsData, scores) {
     - Dead Code (Knip) issues: ${reportsData.knip && Object.keys(reportsData.knip).length > 0 ? 'Yes' : 'No'}
     - ESLint Files with errors: ${reportsData.eslint ? reportsData.eslint.filter(f => f.errorCount > 0).length : 'Unknown'}
     - Duplication percentage: ${reportsData.jscpd ? reportsData.jscpd.statistics?.total?.percentage + '%' : 'Unknown'}
-    - Secrets detected: ${reportsData.secretlint && reportsData.secretlint.some(f => f.messages && f.messages.length > 0) ? 'Yes' : 'No'}
+    - Secrets detected: ${(reportsData.secretlint && Array.isArray(reportsData.secretlint) && reportsData.secretlint.some(f => f.messages && f.messages.length > 0)) ? 'Yes' : 'No'}
     - Vulnerabilities: ${reportsData.audit ? JSON.stringify(reportsData.audit.metadata.vulnerabilities) : 'Unknown'}
   `;
 
@@ -212,9 +215,13 @@ async function main() {
 
   // Determine if CI should fail based on strict criteria
   let failCI = false;
-  if (data.secretlint && data.secretlint.some(f => f.messages && f.messages.length > 0)) {
-    console.error("❌ CRITICAL: Secrets detected in repository.");
-    failCI = true;
+  const secretlintFailData = data.secretlint;
+  if (secretlintFailData) {
+    const hasSecrets = secretlintFailData.some(f => f.messages && f.messages.length > 0);
+    if (hasSecrets) {
+      console.error("❌ CRITICAL: Secrets detected in repository.");
+      failCI = true;
+    }
   }
   if (scores.security < 60) {
     console.error("❌ CRITICAL: Security score below threshold (60).");
