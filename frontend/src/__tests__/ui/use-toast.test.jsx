@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { useToast, toast, Toaster, dispatchForTest } from '../../components/ui/use-toast';
+import { useToast, Toaster, dispatchForTest } from '../../components/ui/use-toast';
 import React, { useEffect, useRef } from 'react';
 
 // Wrapper component to test the hook
@@ -122,16 +121,19 @@ describe('use-toast', () => {
     vi.useFakeTimers();
     render(<ToastTestWrapper />);
 
-    act(() => {
+    await act(async () => {
       screen.getByText('Add and Update').click();
+      vi.advanceTimersByTime(0);
+      await Promise.resolve();
     });
 
     // We can't easily mix await findByText and vi.advanceTimersByTime in JSDOM,
     // so we'll assert synchronously then advance
     expect(screen.getByText('Initial')).toBeInTheDocument();
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(150);
+      await Promise.resolve();
     });
 
     expect(screen.getByText('Updated')).toBeInTheDocument();
