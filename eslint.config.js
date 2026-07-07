@@ -31,6 +31,7 @@ module.exports = [
       'no-unused-vars': ['warn', { "argsIgnorePattern": "^ignored", "caughtErrorsIgnorePattern": "^ignored" }],
       'sonarjs/cognitive-complexity': ['warn', 15],
       'sonarjs/no-duplicate-string': 'off', // Frequently triggers false positives in tests/configs
+      'sonarjs/no-ignored-exceptions': 'off', // Ignored manually in tests
     }
   }
 ];
