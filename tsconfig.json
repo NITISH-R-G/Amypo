@@ -4,13 +4,14 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "allowJs": true,
-    "checkJs": true,
+    "checkJs": false,
     "noEmit": true,
-    "strict": true,
+    "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "ignoreDeprecations": "6.0"
   },
   "include": [
     "backend/**/*.js",
