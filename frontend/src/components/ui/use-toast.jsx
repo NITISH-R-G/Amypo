@@ -146,4 +146,5 @@ function Toaster() {
   )
 }
 
-export { useToast, toast, Toaster }
+export function dispatchForTest(action) { if (process.env.NODE_ENV === "test") dispatch(action) }
+export { useToast, toast, Toaster, dispatchForTest as __dispatchForTest }
