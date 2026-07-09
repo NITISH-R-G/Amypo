@@ -122,6 +122,10 @@ function useToast() {
   }
 }
 
+export function dispatchForTest(action) {
+  if (process.env.NODE_ENV === "test") dispatch(action)
+}
+
 function Toaster() {
   const { toasts } = useToast()
 

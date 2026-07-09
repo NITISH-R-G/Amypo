@@ -1,12 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import TeacherDashboard from '../pages/TeacherDashboard';
 import { BrowserRouter } from 'react-router-dom';
+
+vi.mock('../pages/TrainerPanel', () => ({
+  default: ({ initialTab }) => <div data-testid="mock-trainer-panel">{initialTab} panel</div>
+}));
 
 describe('TeacherDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn((url) => {
+    global.fetch = vi.fn((url, options) => {
+      if (url.includes('/api/questions/1') && options?.method === 'DELETE') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true })
+        });
+      }
       if (url.includes('/api/questions')) {
         return Promise.resolve({
           ok: true,
@@ -21,6 +32,8 @@ describe('TeacherDashboard', () => {
       }
       return Promise.reject(new Error('not found'));
     });
+    vi.spyOn(window, 'confirm').mockImplementation(() => true);
+    vi.spyOn(window, 'alert').mockImplementation(() => {});
   });
 
   const renderComponent = () => render(
@@ -43,5 +56,72 @@ describe('TeacherDashboard', () => {
     expect(screen.getByText('Modern Frontend Fundamentals Question 1')).toBeInTheDocument();
     expect(screen.getByText(/1 Questions/)).toBeInTheDocument();
     expect(screen.getByText(/1 Students Enrolled/)).toBeInTheDocument();
+  });
+
+  it('switches tabs to Spec Builder and Analytics', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    const builderTab = screen.getByRole('button', { name: /Spec Builder/i });
+    await user.click(builderTab);
+    expect(await screen.findByTestId('mock-trainer-panel')).toHaveTextContent('builder panel');
+
+    const analyticsTab = screen.getByRole('button', { name: /Analytics/i });
+    await user.click(analyticsTab);
+    expect(await screen.findByTestId('mock-trainer-panel')).toHaveTextContent('analytics panel');
+
+    const overviewTab = screen.getByRole('button', { name: /Overview/i });
+    await user.click(overviewTab);
+    expect(await screen.findByText('Modern Frontend Fundamentals')).toBeInTheDocument();
+  });
+
+  it('deletes a question when confirmed', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    const deleteButton = screen.getByTitle('Delete question');
+    await user.click(deleteButton);
+
+    expect(window.confirm).toHaveBeenCalledWith('Delete Question 1? This cannot be undone.');
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions/1', expect.objectContaining({ method: 'DELETE' }));
+    });
+
+    expect(screen.queryByText('Modern Frontend Fundamentals Question 1')).not.toBeInTheDocument();
+  });
+
+  it('handles delete error gracefully', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    global.fetch.mockImplementation((url, options) => {
+      if (url.includes('/api/questions/1') && options?.method === 'DELETE') {
+        return Promise.resolve({
+          ok: false,
+          json: () => Promise.resolve({ error: 'Delete failed backend' })
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ questions: [] }) });
+    });
+
+    const deleteButton = screen.getByTitle('Delete question');
+    await user.click(deleteButton);
+
+    await waitFor(() => {
+        expect(window.alert).toHaveBeenCalledWith('Delete failed backend');
+    });
   });
 });
