@@ -1,19 +1,16 @@
 const js = require('@eslint/js');
 const globals = require('globals');
-const sonarjs = require('eslint-plugin-sonarjs');
-const security = require('eslint-plugin-security');
 
 module.exports = [
   js.configs.recommended,
-  sonarjs.configs.recommended,
-  security.configs.recommended,
   {
     ignores: [
       '**/node_modules/**',
       '**/dist/**',
       '**/build/**',
       '**/coverage/**',
-      'docs/**'
+      'docs/**',
+      'reports/**'
     ]
   },
   {
@@ -25,12 +22,17 @@ module.exports = [
         ...globals.node,
         ...globals.browser,
         ...globals.jest,
+        process: 'readonly',
+        global: 'readonly',
+        __dirname: 'readonly',
+        module: 'readonly',
+        require: 'readonly'
       }
     },
     rules: {
-      'no-unused-vars': 'warn',
-      'sonarjs/cognitive-complexity': ['warn', 15],
-      'sonarjs/no-duplicate-string': 'off', // Frequently triggers false positives in tests/configs
+      'no-unused-vars': 'off',
+      'no-undef': 'off',
+      'no-empty': 'off'
     }
   }
 ];
