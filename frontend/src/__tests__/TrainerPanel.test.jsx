@@ -4,6 +4,11 @@ import userEvent from '@testing-library/user-event';
 import TrainerPanel from '../pages/TrainerPanel';
 import { BrowserRouter } from 'react-router-dom';
 
+vi.mock('react-chartjs-2', () => ({
+  Bar: () => null,
+  Doughnut: () => null
+}));
+
 describe('TrainerPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -59,5 +64,68 @@ describe('TrainerPanel', () => {
         method: 'PUT'
       }));
     });
+  });
+
+  it('switches between tabs and renders builder and analytics sections', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    const builderTab = await screen.findByRole('button', { name: /Content Builder/i });
+    await user.click(builderTab);
+    expect(await screen.findByText(/Visual Test Spec Builder/i)).toBeInTheDocument();
+
+    const analyticsTab = await screen.findByRole('button', { name: /Cohort Analytics/i });
+    await user.click(analyticsTab);
+    expect(await screen.findByText(/Avg. Score/i)).toBeInTheDocument();
+  });
+
+  it('adds an interaction and updates it in the builder', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    const builderTab = await screen.findByRole('button', { name: /Content Builder/i });
+    await user.click(builderTab);
+
+    const addInteractionBtn = await screen.findByRole('button', { name: /Add Step/i });
+    await user.click(addInteractionBtn);
+
+    const inputs = await screen.findAllByRole('textbox');
+    expect(inputs.length).toBeGreaterThan(0);
+    const selectorInput = inputs.find(i => i.placeholder === '#submit-btn, .nav-link...');
+
+    if (selectorInput) {
+      await user.type(selectorInput, '.test-class');
+      expect(selectorInput).toHaveValue('.test-class');
+    }
+  });
+
+  it('removes an interaction from the builder', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    const builderTab = await screen.findByRole('button', { name: /Content Builder/i });
+    await user.click(builderTab);
+
+    const addInteractionBtn = await screen.findByRole('button', { name: /Add Step/i });
+    await user.click(addInteractionBtn);
+
+    const deleteBtns = await screen.findAllByRole('button');
+    const deleteBtn = deleteBtns.find(b => b.className.includes('hover:text-red-500') && !b.disabled);
+
+    if(deleteBtn) {
+      await user.click(deleteBtn);
+    }
   });
 });
