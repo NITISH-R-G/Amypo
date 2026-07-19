@@ -74,11 +74,11 @@ The `assessment-engine` repository consists of 3 services:
 
 ## Recent Code Changes
 
+- docs: auto-generate repository documentation and diagrams [skip ci] (552ca23)
 - docs: auto-generate repository documentation and diagrams [skip ci] (02d525a)
 - docs: auto-generate repository documentation and diagrams [skip ci] (50cb559)
 - docs: auto-generate repository documentation and diagrams [skip ci] (dfed17f)
 - docs: auto-generate repository documentation and diagrams [skip ci] (be31995)
-- Merge pull request #48 from NITISH-R-G/feature/frontend-test-coverage-expansion-13032431621822664147 (9fd5546)
 
 ## Infrastructure
 
