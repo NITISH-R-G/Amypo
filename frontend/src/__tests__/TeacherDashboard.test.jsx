@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import TeacherDashboard from '../pages/TeacherDashboard';
 import { BrowserRouter } from 'react-router-dom';
+
+vi.mock('react-chartjs-2', () => ({
+  Bar: () => null,
+  Doughnut: () => null
+}));
 
 describe('TeacherDashboard', () => {
   beforeEach(() => {
@@ -43,5 +48,38 @@ describe('TeacherDashboard', () => {
     expect(screen.getByText('Modern Frontend Fundamentals Question 1')).toBeInTheDocument();
     expect(screen.getByText(/1 Questions/)).toBeInTheDocument();
     expect(screen.getByText(/1 Students Enrolled/)).toBeInTheDocument();
+  });
+
+  it('switches between tabs and simulates deleting a question', async () => {
+    renderComponent();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    // Switch to Spec Builder tab
+    const specBuilderBtn = await screen.findByRole('button', { name: /Spec Builder/i });
+    fireEvent.click(specBuilderBtn);
+    // Since TrainerPanel is embedded, we just check if it switched states or if fetch was called.
+
+    // Switch to Analytics tab (which renders TrainerPanel's analytics)
+    // The button might not have the role or accessible name we expect due to nesting or icons
+    // Let's use findByText
+    const analyticsBtn = await screen.findByText('Analytics');
+    fireEvent.click(analyticsBtn);
+
+    // Switch back to Overview
+    const overviewBtn = await screen.findByText('Overview');
+    fireEvent.click(overviewBtn);
+
+    // Mock confirm and delete
+    vi.spyOn(window, 'confirm').mockImplementation(() => true);
+
+    const deleteBtn = await screen.findByTitle('Delete question');
+    fireEvent.click(deleteBtn);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions/1', expect.objectContaining({ method: 'DELETE' }));
+    });
   });
 });

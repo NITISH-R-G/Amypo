@@ -60,4 +60,23 @@ describe('TrainerPanel', () => {
       }));
     });
   });
+
+  it('renders the content builder and visual test spec builder elements', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+    expect(await screen.findByText('Question 1')).toBeInTheDocument();
+
+    expect(screen.getByText('Content Builder')).toBeInTheDocument();
+    expect(screen.getByText('Visual Test Spec Builder')).toBeInTheDocument();
+
+    // Wait for the state to settle and populate the inputs
+    await waitFor(() => {
+      const titleInput = screen.getByDisplayValue('Question 1');
+      expect(titleInput).toBeInTheDocument();
+    });
+  });
 });
