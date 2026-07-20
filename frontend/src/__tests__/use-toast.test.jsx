@@ -10,7 +10,11 @@ function TestComponent({ action }) {
 
   React.useEffect(() => {
     if (action === 'trigger') {
-      const t = toast({ title: 'Test Toast', description: 'Test Description', action: <button>Action</button> });
+      const t = toast({
+        title: 'Test Toast',
+        description: 'Test Description',
+        action: <button>Action</button>,
+      });
       setUpdater(() => t.update);
     }
   }, [action]);
@@ -24,11 +28,25 @@ function TestComponent({ action }) {
   return (
     <div>
       <button onClick={() => toast({ title: 'Click Toast' })}>Click Me</button>
-      <button onClick={() => {
-        const t = toast({ title: 'Dismissable Toast' });
-        setTimeout(() => t.dismiss(), 100);
-      }}>Dismiss Me</button>
-      <button onClick={() => toast({ title: 'Test Toast', description: 'Test Description', action: <button>Action</button> })}>Trigger Toast</button>
+      <button
+        onClick={() => {
+          const t = toast({ title: 'Dismissable Toast' });
+          setTimeout(() => t.dismiss(), 100);
+        }}
+      >
+        Dismiss Me
+      </button>
+      <button
+        onClick={() =>
+          toast({
+            title: 'Test Toast',
+            description: 'Test Description',
+            action: <button>Action</button>,
+          })
+        }
+      >
+        Trigger Toast
+      </button>
     </div>
   );
 }
@@ -127,11 +145,17 @@ describe('use-toast', () => {
   it('updates a toast using hook returned functions', async () => {
     let globalUpdater;
     function UpdateComponent() {
-        const { toast } = useToast();
-        return <button onClick={() => {
+      const { toast } = useToast();
+      return (
+        <button
+          onClick={() => {
             const t = toast({ title: 'Original Title' });
             globalUpdater = t.update;
-        }}>Create</button>
+          }}
+        >
+          Create
+        </button>
+      );
     }
 
     render(
@@ -146,7 +170,7 @@ describe('use-toast', () => {
     expect(elems.length).toBeGreaterThan(0);
 
     act(() => {
-       globalUpdater({ title: 'Updated Title' });
+      globalUpdater({ title: 'Updated Title' });
     });
 
     const upElems = await screen.findAllByText('Updated Title');
@@ -156,12 +180,18 @@ describe('use-toast', () => {
   it('dismisses all toasts when dismiss is called without id', async () => {
     let globalDismiss;
     function DismissComponent() {
-        const { toast, dismiss } = useToast();
-        globalDismiss = dismiss;
-        return <button onClick={() => {
+      const { toast, dismiss } = useToast();
+      globalDismiss = dismiss;
+      return (
+        <button
+          onClick={() => {
             toast({ title: 'Toast 1' });
             toast({ title: 'Toast 2' });
-        }}>Create Multiple</button>
+          }}
+        >
+          Create Multiple
+        </button>
+      );
     }
 
     render(
@@ -178,7 +208,7 @@ describe('use-toast', () => {
     expect(t2.length).toBeGreaterThan(0);
 
     act(() => {
-       globalDismiss();
+      globalDismiss();
     });
 
     await waitFor(() => {
@@ -206,11 +236,17 @@ describe('use-toast', () => {
 
   it('handles REMOVE_TOAST without id to clear all toasts', async () => {
     function RemoveAllComponent() {
-        const { toast } = useToast();
-        return <button onClick={() => {
+      const { toast } = useToast();
+      return (
+        <button
+          onClick={() => {
             toast({ title: 'Remove 1' });
             toast({ title: 'Remove 2' });
-        }}>Create Multiple</button>
+          }}
+        >
+          Create Multiple
+        </button>
+      );
     }
 
     render(
@@ -225,7 +261,7 @@ describe('use-toast', () => {
     expect(r1.length).toBeGreaterThan(0);
 
     act(() => {
-       dispatchForTest({ type: "REMOVE_TOAST" });
+      dispatchForTest({ type: 'REMOVE_TOAST' });
     });
 
     await waitFor(() => {
@@ -235,65 +271,65 @@ describe('use-toast', () => {
 });
 
 describe('use-toast edge cases', () => {
-    it('handles DISMISS_TOAST with specific id', async () => {
-        let globalDismiss;
-        let globalToast;
-        function DismissIdComponent() {
-            const { toast, dismiss } = useToast();
-            globalDismiss = dismiss;
-            globalToast = toast;
-            return <button>Create</button>
-        }
+  it('handles DISMISS_TOAST with specific id', async () => {
+    let globalDismiss;
+    let globalToast;
+    function DismissIdComponent() {
+      const { toast, dismiss } = useToast();
+      globalDismiss = dismiss;
+      globalToast = toast;
+      return <button>Create</button>;
+    }
 
-        render(
-            <>
-                <DismissIdComponent />
-                <Toaster />
-            </>
-        );
+    render(
+      <>
+        <DismissIdComponent />
+        <Toaster />
+      </>
+    );
 
-        let t1Id;
-        act(() => {
-           t1Id = globalToast({ title: 'T1' }).id;
-           globalToast({ title: 'T2' });
-        });
-
-        const t1Elems = await screen.findAllByText('T1');
-        const t2Elems = await screen.findAllByText('T2');
-        expect(t1Elems.length).toBeGreaterThan(0);
-        expect(t2Elems.length).toBeGreaterThan(0);
-
-        act(() => {
-           globalDismiss(t1Id);
-        });
-
-        await waitFor(() => {
-            expect(screen.queryByText('T1')).not.toBeInTheDocument();
-        });
-
-        expect(screen.getByText('T2')).toBeInTheDocument();
+    let t1Id;
+    act(() => {
+      t1Id = globalToast({ title: 'T1' }).id;
+      globalToast({ title: 'T2' });
     });
+
+    const t1Elems = await screen.findAllByText('T1');
+    const t2Elems = await screen.findAllByText('T2');
+    expect(t1Elems.length).toBeGreaterThan(0);
+    expect(t2Elems.length).toBeGreaterThan(0);
+
+    act(() => {
+      globalDismiss(t1Id);
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('T1')).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByText('T2')).toBeInTheDocument();
+  });
 });
 describe('use-toast specific removals', () => {
   it('removes a specific toast by id', async () => {
     let globalToast;
     function RemoveSpecificComponent() {
-        const { toast } = useToast();
-        globalToast = toast;
-        return <button>Create</button>
+      const { toast } = useToast();
+      globalToast = toast;
+      return <button>Create</button>;
     }
 
     render(
-        <>
-            <RemoveSpecificComponent />
-            <Toaster />
-        </>
+      <>
+        <RemoveSpecificComponent />
+        <Toaster />
+      </>
     );
 
     let t1Id;
     act(() => {
-       t1Id = globalToast({ title: 'R1' }).id;
-       globalToast({ title: 'R2' });
+      t1Id = globalToast({ title: 'R1' }).id;
+      globalToast({ title: 'R2' });
     });
 
     const r1Elems = await screen.findAllByText('R1');
@@ -302,69 +338,69 @@ describe('use-toast specific removals', () => {
     expect(r2Elems.length).toBeGreaterThan(0);
 
     act(() => {
-       dispatchForTest({ type: "REMOVE_TOAST", toastId: t1Id });
+      dispatchForTest({ type: 'REMOVE_TOAST', toastId: t1Id });
     });
 
     await waitFor(() => {
-        expect(screen.queryByText('R1')).not.toBeInTheDocument();
+      expect(screen.queryByText('R1')).not.toBeInTheDocument();
     });
 
     expect(screen.getByText('R2')).toBeInTheDocument();
   });
 });
 describe('toast openChange handler', () => {
-    it('calls dismiss when onOpenChange receives false', async () => {
-        let globalToast;
-        function OpenChangeComponent() {
-            const { toast } = useToast();
-            globalToast = toast;
-            return <button>Create</button>
-        }
+  it('calls dismiss when onOpenChange receives false', async () => {
+    let globalToast;
+    function OpenChangeComponent() {
+      const { toast } = useToast();
+      globalToast = toast;
+      return <button>Create</button>;
+    }
 
-        render(
-            <>
-                <OpenChangeComponent />
-                <Toaster />
-            </>
-        );
+    render(
+      <>
+        <OpenChangeComponent />
+        <Toaster />
+      </>
+    );
 
-        act(() => {
-           globalToast({ title: 'OpenChangeTest' });
-        });
-
-        expect(screen.getByText('OpenChangeTest')).toBeInTheDocument();
-
-        // Find the Toast root element directly and simulate what Radix does
-        // For testing purposes, we might just need to test the onOpenChange callback directly since we're using JSDOM
-        const listItems = document.querySelectorAll('li[data-radix-collection-item]');
-
-        act(() => {
-           // Radix UI calls onOpenChange when it's closed via gestures, etc.
-           // Since we don't simulate real DOM gestures in JSDOM, let's just trigger dismiss directly via other means
-           // Or test that calling the generated onOpenChange handler works.
-        });
+    act(() => {
+      globalToast({ title: 'OpenChangeTest' });
     });
+
+    expect(screen.getByText('OpenChangeTest')).toBeInTheDocument();
+
+    // Find the Toast root element directly and simulate what Radix does
+    // For testing purposes, we might just need to test the onOpenChange callback directly since we're using JSDOM
+    const listItems = document.querySelectorAll('li[data-radix-collection-item]');
+
+    act(() => {
+      // Radix UI calls onOpenChange when it's closed via gestures, etc.
+      // Since we don't simulate real DOM gestures in JSDOM, let's just trigger dismiss directly via other means
+      // Or test that calling the generated onOpenChange handler works.
+    });
+  });
 });
 describe('toast openChange true handler', () => {
-    it('ignores onOpenChange(true)', async () => {
-        let globalToast;
-        function OpenChangeTrueComponent() {
-            const { toast } = useToast();
-            globalToast = toast;
-            return <button>Create</button>
-        }
+  it('ignores onOpenChange(true)', async () => {
+    let globalToast;
+    function OpenChangeTrueComponent() {
+      const { toast } = useToast();
+      globalToast = toast;
+      return <button>Create</button>;
+    }
 
-        render(
-            <>
-                <OpenChangeTrueComponent />
-                <Toaster />
-            </>
-        );
+    render(
+      <>
+        <OpenChangeTrueComponent />
+        <Toaster />
+      </>
+    );
 
-        act(() => {
-           globalToast({ title: 'OpenChangeTrueTest' });
-        });
-
-        expect(screen.getByText('OpenChangeTrueTest')).toBeInTheDocument();
+    act(() => {
+      globalToast({ title: 'OpenChangeTrueTest' });
     });
+
+    expect(screen.getByText('OpenChangeTrueTest')).toBeInTheDocument();
+  });
 });
