@@ -2,8 +2,8 @@
 
 ## Synthetic Scores
 
-- **Code Quality Score:** 50/100
-- **Security Score:** 50/100
+- **Code Quality Score:** 100/100
+- **Security Score:** 100/100
 - **Maintainability Score:** 100/100
 
 ## AI Insights & Recommendations
