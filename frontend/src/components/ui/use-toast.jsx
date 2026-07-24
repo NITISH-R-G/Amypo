@@ -74,6 +74,7 @@ function reducer(state, action) {
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
       }
   }
+  return state;
 }
 
 function toast({ ...props }) {
@@ -144,6 +145,12 @@ function Toaster() {
       <ToastViewport />
     </ToastProvider>
   )
+}
+
+export function dispatchForTest(action) {
+  if (process.env.NODE_ENV === "test") {
+    dispatch(action);
+  }
 }
 
 export { useToast, toast, Toaster }

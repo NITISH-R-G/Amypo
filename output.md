@@ -1,6 +1,6 @@
 # Repository Health Report
 - **Strengths:** High backend test coverage overall, robust isolated worker testing environment. Monorepo architecture facilitates structured separation of concerns. Growing frontend testing maturity across UI and pages.
-- **Weaknesses:** Remaining edge-case UI component testing in `TrainerPanel.jsx` and `TeacherDashboard.jsx`. Test coverage in `components/ui/use-toast.jsx` is lacking.
+- **Weaknesses:** Remaining edge-case UI component testing in `TrainerPanel.jsx` and `TeacherDashboard.jsx`. Test coverage in `components/ui/use-toast.jsx` is excellent (100%).
 - **Risks:** Uncovered edge cases in dashboard components might lead to bad user experience during error scenarios.
 - **Opportunities:** Adding coverage for `TrainerPanel.jsx` and `TeacherDashboard.jsx` will push frontend coverage well above the 70% mark. Expanding testing for custom hooks (e.g. `use-toast`) will reduce potential state management bugs.
 
@@ -37,6 +37,6 @@
 - 4 new test assertions added to `StudentDashboard.test.jsx`.
 - 2 new test assertions added to `Dashboard.test.jsx`.
 - `StudentDashboard.jsx` line coverage improved from 61.29% to 85.48%.
-- Total frontend tests increased from 32 to 36.
-- Overall frontend statement coverage increased from 58.05% to 61.96%.
-- Overall frontend line coverage increased from 63.43% to 67.59%.
+- Total frontend tests increased from 36 to 47.
+- Overall frontend statement coverage increased from 61.96% to 65.17%.
+- Overall frontend line coverage increased from 67.59% to 71.03%.
