@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React, { useEffect } from 'react';
 import { useToast, toast, Toaster, dispatchForTest } from '../components/ui/use-toast';
 
 function TestComponent() {
-  const { toasts, dismiss } = useToast();
+  const { dismiss } = useToast();
 
   useEffect(() => {
     dispatchForTest({ type: 'REMOVE_TOAST' });
@@ -23,7 +23,9 @@ function TestComponent() {
 
 describe('use-toast', () => {
   beforeEach(() => {
-    global.IS_REACT_ACT_ENVIRONMENT = true;
+    if (typeof globalThis !== 'undefined') {
+      globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+    }
   });
   beforeEach(() => {
     dispatchForTest({ type: 'REMOVE_TOAST' });
@@ -108,10 +110,9 @@ describe('use-toast', () => {
       </>
     );
 
-    let id, update;
+    let update;
     act(() => {
       const res = toast({ title: 'Initial Title' });
-      id = res.id;
       update = res.update;
     });
 
