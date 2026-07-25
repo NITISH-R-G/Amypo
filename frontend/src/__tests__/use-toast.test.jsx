@@ -74,7 +74,7 @@ describe('use-toast', () => {
     });
 
     await waitFor(() => {
-        expect(screen.queryByText('Test Toast 2')).not.toBeInTheDocument();
+      expect(screen.queryByText('Test Toast 2')).not.toBeInTheDocument();
     });
   });
 
@@ -96,7 +96,7 @@ describe('use-toast', () => {
     });
 
     // Give it a moment to render all
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 100));
 
     const toastTitles = screen.queryAllByText('Test Toast');
     expect(toastTitles.length).toBe(3);
@@ -152,5 +152,4 @@ describe('use-toast', () => {
       expect(screen.queryByText('Test Toast')).not.toBeInTheDocument();
     });
   });
-
 });
