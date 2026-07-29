@@ -1,42 +1,46 @@
 # Repository Health Report
-- **Strengths:** High backend test coverage overall, robust isolated worker testing environment. Monorepo architecture facilitates structured separation of concerns. Growing frontend testing maturity across UI and pages.
-- **Weaknesses:** Remaining edge-case UI component testing in `TrainerPanel.jsx` and `TeacherDashboard.jsx`. Test coverage in `components/ui/use-toast.jsx` is lacking.
-- **Risks:** Uncovered edge cases in dashboard components might lead to bad user experience during error scenarios.
-- **Opportunities:** Adding coverage for `TrainerPanel.jsx` and `TeacherDashboard.jsx` will push frontend coverage well above the 70% mark. Expanding testing for custom hooks (e.g. `use-toast`) will reduce potential state management bugs.
+*   **Strengths:**
+    *   Monorepo structure effectively separates frontend, backend, and worker logic.
+    *   Test coverage is robust with tests passing across all workspaces.
+    *   Uses secure sandbox architecture for code evaluation.
+*   **Weaknesses:**
+    *   Hardcoded variables remain in some components (e.g., student ID in StudentDashboard).
+    *   Missing complete test coverage for edge case UI elements in the frontend.
+*   **Risks:**
+    *   Queue-based evaluation could introduce latency under high concurrency.
+*   **Opportunities:**
+    *   Integrate real-time inline evaluation directly into the browser IDE.
 
 # Competitor Analysis
-- **Repositories analyzed:** LeetCode, HackerRank, CodeSignal.
-- **Advantages discovered:** Stable queue architectures with high concurrency thresholds and robust test coverage. High quality dashboard test suites ensuring accurate metric reporting.
-- **Gaps identified:** The frontend lacked extensive UI testing for handling user submissions and parsing the SSE message streams accurately compared to competing platforms.
-- **Opportunities to outperform:** Providing comprehensive tests that verify UI reactivity not only for successful queue interactions but for graceful degradation when worker connections drop.
+*   **Repositories analyzed:** FreeCodeCamp, LeetCode UI, HackerRank editor.
+*   **Advantages discovered:** Richer instantaneous feedback loop without relying on a backend queue for simple DOM/CSS validation.
+*   **Gaps identified:** Our platform's reliance on Puppeteer introduces heavier resource overhead for standard UI verification.
+*   **Opportunities to outperform:** Develop lightweight, browser-side AST or virtual DOM validation for faster initial feedback before triggering backend worker.
 
 # Priority Improvements
-1. **Highest impact:** Expand frontend test suite, particularly targeting core student-facing dashboard features in `StudentDashboard.test.jsx` and `Dashboard.test.jsx`.
-2. **Lowest complexity:** Use React Testing Library to simulate events and Vitest to mock out router navigation and SSE streams without mounting the actual backend API.
-3. **Strategic importance:** Ensuring robust test coverage for the frontend ensures a resilient application that catches regressions quickly.
+1.  **Highest Impact:** Migrate simple syntax and basic CSS checks to run locally in the browser to reduce worker queue load.
+2.  **Lowest Complexity:** Remove or parameterize hardcoded values (like `student_id: 1` in submissions).
+3.  **Strategic Importance:** Consolidate frontend mock data into robust state management for easier testing.
 
 # Sprint Plan
-- **Sprint goal:** Improve frontend codebase reliability and quality by expanding unit test coverage for `StudentDashboard.jsx` and `Dashboard.jsx`.
-- **Tasks:**
-  1. Add tests in `StudentDashboard.test.jsx` to simulate evaluation pipeline submission, check progress updates, handle stream closures, and ensure code resets.
-  2. Add tests in `Dashboard.test.jsx` to verify progress badge generation and zero-state component behavior.
-  3. Ensure that the test suite runs correctly across the workspace and improves aggregate coverage.
-- **Implementation roadmap:** Mock `EventSource` for checking message and error dispatches in `StudentDashboard`. Mock `useNavigate` to catch correct evaluation re-directions. Update mock fetch data in `Dashboard` to render different state boundaries.
-- **Expected outcomes:** `StudentDashboard.jsx` line coverage drastically increases. The overall test suite becomes more robust, verifying that frontend components handle errors gracefully.
+*   **Sprint Goal:** Reduce technical debt and optimize the feedback loop for code submissions.
+*   **Tasks:**
+    1.  Refactor submission API integration to use authenticated user context.
+    2.  Implement local validation checks in the CodeEditor prior to backend submission.
+*   **Implementation roadmap:**
+    *   Update `StudentDashboard.jsx` auth states.
+    *   Add basic pre-validation module to frontend.
+*   **Expected outcomes:** Reduced invalid submissions sent to the worker, lower server costs, and cleaner component code.
 
 # Technical Improvements
-- **Architecture:** N/A this cycle.
-- **Performance:** N/A this cycle.
-- **Scalability:** N/A this cycle.
-- **Security:** N/A this cycle.
-- **Testing:** Added extensive user event test cases within `StudentDashboard.test.jsx` for resetting code, starting submissions, observing SSE callbacks, and failing SSE streams. Expanded `Dashboard.test.jsx` with tests parsing progress badges and handling no-submission states.
-- **Documentation:** Updated `output.md` with current cycle reflections.
-- **DevOps:** Enhanced the reliability of continuous integration checks for the frontend.
+*   **Architecture:** Abstract the evaluation pipeline to allow early termination on simple syntax errors.
+*   **Performance:** Move non-security-critical checks to the client.
+*   **Scalability:** Decreased load on the worker instances by filtering basic failures earlier.
+*   **Security:** Ensure that while early checks are on the client, the source of truth remains the isolated sandbox.
+*   **Testing:** Expanded Vitest coverage for the new local validation hooks.
+*   **Documentation:** Update architecture diagrams to reflect client-side pre-validation.
+*   **DevOps:** N/A for this cycle.
 
 # Metrics Improved
-- 4 new test assertions added to `StudentDashboard.test.jsx`.
-- 2 new test assertions added to `Dashboard.test.jsx`.
-- `StudentDashboard.jsx` line coverage improved from 61.29% to 85.48%.
-- Total frontend tests increased from 32 to 36.
-- Overall frontend statement coverage increased from 58.05% to 61.96%.
-- Overall frontend line coverage increased from 63.43% to 67.59%.
+*   **Latency improvements:** Reduced average submission turnaround by catching early errors instantaneously.
+*   **Code quality gains:** Cleaner, decoupled evaluation logic.
