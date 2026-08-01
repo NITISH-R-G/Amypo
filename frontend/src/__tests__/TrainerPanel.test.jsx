@@ -60,4 +60,44 @@ describe('TrainerPanel', () => {
       }));
     });
   });
+
+  it('allows adding and modifying interaction steps', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    const addStepButton = await screen.findByRole('button', { name: /Add Step/i });
+    await user.click(addStepButton);
+
+    const actionSelects = await screen.findAllByRole('combobox');
+    expect(actionSelects.length).toBeGreaterThan(0);
+
+    // Choose an action that requires a selector
+    await user.selectOptions(actionSelects[actionSelects.length - 1], 'click');
+
+    const selectorInputs = await screen.findAllByDisplayValue('');
+    const selectorInput = selectorInputs.find(el => el.className.includes('font-mono'));
+
+    if (selectorInput) {
+      await user.type(selectorInput, '.my-button');
+      expect(selectorInput).toHaveValue('.my-button');
+    }
+  });
+
+  it('switches tabs correctly', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    const builderTab = await screen.findByRole('button', { name: /Builder/i });
+    const analyticsTab = await screen.findByRole('button', { name: /Analytics/i });
+
+    await user.click(analyticsTab);
+    expect(await screen.findByText(/Avg. Score/i)).toBeInTheDocument();
+
+    await user.click(builderTab);
+    expect(await screen.findByText(/Visual Test Spec Builder/i)).toBeInTheDocument();
+  });
 });
