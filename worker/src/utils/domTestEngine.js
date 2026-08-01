@@ -60,11 +60,11 @@ async function executeDomTests(page, domTestSpec) {
             hint = `Expected ${assertion} to match "${expected}" for ${test.selector}`;
           }
         }
-      } catch (e) {
+      } catch (_err) {
         hint = `Invalid selector: ${test.selector}`;
       }
       return { 
-        testId: test.id || Math.random().toString(36).substr(2, 9), 
+        testId: test.id || crypto.randomUUID(),
         passed, 
         hint, 
         selector: test.selector 
