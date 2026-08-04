@@ -37,7 +37,7 @@ function analyzeRepository() {
     let inDependsOn = false;
 
     lines.forEach(line => {
-      const serviceMatch = line.match(/^ {2}([a-zA-Z0-9_-]+):/);
+      const serviceMatch = line.match(/^  ([a-zA-Z0-9_-]+):/);
       if (serviceMatch && !line.includes('depends_on')) {
         currentService = serviceMatch[1];
         inDependsOn = false;
@@ -58,14 +58,14 @@ function analyzeRepository() {
           if (line.trim() === 'depends_on:') {
               inDependsOn = true;
           } else if (inDependsOn) {
-              const depMatch = line.match(/^ {6}- ([a-zA-Z0-9_-]+)/) || line.match(/^ {6}([a-zA-Z0-9_-]+):/);
+              const depMatch = line.match(/^      - ([a-zA-Z0-9_-]+)/) || line.match(/^      ([a-zA-Z0-9_-]+):/);
               if (depMatch) {
                   if (!serviceDependencies[currentService]) serviceDependencies[currentService] = [];
                   if (!serviceDependencies[currentService].includes(depMatch[1])) {
                       serviceDependencies[currentService].push(depMatch[1]);
                   }
               } else if (!line.trim().startsWith('-') && !line.trim().startsWith('condition') && line.trim() !== '') {
-                  if(!line.match(/^ {6}[a-zA-Z0-9_-]+:/)) {
+                  if(!line.match(/^      [a-zA-Z0-9_-]+:/)) {
                     inDependsOn = false;
                   }
               }

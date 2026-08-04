@@ -156,7 +156,7 @@ export default function QuestionEditor() {
       save();
     }, 2000);
     return () => clearTimeout(t);
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dirty, isEdit]);
 
   const addConstraint = () => {
