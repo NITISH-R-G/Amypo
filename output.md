@@ -34,9 +34,11 @@
 - **DevOps:** Enhanced the reliability of continuous integration checks for the frontend.
 
 # Metrics Improved
-- 4 new test assertions added to `StudentDashboard.test.jsx`.
-- 2 new test assertions added to `Dashboard.test.jsx`.
-- `StudentDashboard.jsx` line coverage improved from 61.29% to 85.48%.
-- Total frontend tests increased from 32 to 36.
-- Overall frontend statement coverage increased from 58.05% to 61.96%.
-- Overall frontend line coverage increased from 63.43% to 67.59%.
+- Added comprehensive unit tests for `use-toast.jsx` (`frontend/src/components/ui/__tests__/use-toast.test.jsx`).
+- Expanded test assertions in `TrainerPanel.test.jsx` (switching tabs, adding assertions, submitting new questions).
+- Expanded test assertions in `TeacherDashboard.test.jsx` (tab switching, deleting questions, handling failed requests).
+- Total frontend tests increased from 36 to 50.
+- `TeacherDashboard.jsx` line coverage improved from 62.9% to 91.93%.
+- `TrainerPanel.jsx` line coverage improved from 58.75% to 77.91%.
+- `use-toast.jsx` line coverage improved from 56.09% to 87.8%.
+- Overall frontend component line coverage (`components/ui`) improved significantly to 91.78%.
