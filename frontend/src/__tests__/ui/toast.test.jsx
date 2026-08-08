@@ -17,6 +17,7 @@ function ClearComponent() {
   const { dismiss } = useToast();
   useEffect(() => {
     dismiss();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return null;
 }

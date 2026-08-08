@@ -3,7 +3,6 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TeacherDashboard from '../pages/TeacherDashboard';
 import { BrowserRouter } from 'react-router-dom';
-import { useToast } from '../components/ui/use-toast';
 
 vi.mock('../components/ui/use-toast', () => ({
   useToast: () => ({
@@ -14,7 +13,7 @@ vi.mock('../components/ui/use-toast', () => ({
 describe('TeacherDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn((url, options) => {
+    window.fetch = vi.fn((url, options) => {
       if (url.includes('/api/questions')) {
         if (options?.method === 'DELETE') {
             return Promise.resolve({ ok: true });
@@ -47,8 +46,8 @@ describe('TeacherDashboard', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
-      expect(global.fetch).toHaveBeenCalledWith('/api/submissions?limit=200');
+      expect(window.fetch).toHaveBeenCalledWith('/api/questions');
+      expect(window.fetch).toHaveBeenCalledWith('/api/submissions?limit=200');
     });
 
     // Check elements after loading
@@ -64,7 +63,7 @@ describe('TeacherDashboard', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+        expect(window.fetch).toHaveBeenCalledWith('/api/questions');
       });
 
       const deleteButton = await screen.findByRole('button', { name: /delete/i });
@@ -73,6 +72,6 @@ describe('TeacherDashboard', () => {
       });
 
       expect(window.confirm).toHaveBeenCalled();
-      expect(global.fetch).toHaveBeenCalledWith('/api/questions/1', expect.objectContaining({ method: 'DELETE' }));
+      expect(window.fetch).toHaveBeenCalledWith('/api/questions/1', expect.objectContaining({ method: 'DELETE' }));
   });
 });

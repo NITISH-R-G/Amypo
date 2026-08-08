@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TrainerPanel from '../pages/TrainerPanel';
 import { BrowserRouter } from 'react-router-dom';
-import { useToast } from '../components/ui/use-toast';
 
 vi.mock('../components/ui/use-toast', () => ({
   useToast: () => ({
@@ -14,7 +13,7 @@ vi.mock('../components/ui/use-toast', () => ({
 describe('TrainerPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn((url, options) => {
+    window.fetch = vi.fn((url, options) => {
       if (url.includes('/api/questions/1/baseline')) {
         return Promise.resolve({
             ok: true,
@@ -59,7 +58,7 @@ describe('TrainerPanel', () => {
     });
 
     // We are overriding ResizeObserver here since TrainerPanel uses react-chartjs-2 which requires ResizeObserver
-    global.ResizeObserver = class ResizeObserver {
+    window.ResizeObserver = class ResizeObserver {
       observe() {}
       unobserve() {}
       disconnect() {}
@@ -77,7 +76,7 @@ describe('TrainerPanel', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+      expect(window.fetch).toHaveBeenCalledWith('/api/questions');
     });
 
     // Select the question
@@ -85,7 +84,7 @@ describe('TrainerPanel', () => {
     await user.click(qButton);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/trainer/questions/1/draft');
+      expect(window.fetch).toHaveBeenCalledWith('/api/trainer/questions/1/draft');
     });
 
     // Need to use waitFor on the title since the data might load dynamically
@@ -99,7 +98,7 @@ describe('TrainerPanel', () => {
     await user.click(saveButton);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(window.fetch).toHaveBeenCalledWith(
         '/api/trainer/questions/1/draft',
         expect.objectContaining({ method: 'PUT' })
       );
@@ -111,7 +110,7 @@ describe('TrainerPanel', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+      expect(window.fetch).toHaveBeenCalledWith('/api/questions');
     });
 
     const addButtons = screen.getAllByRole('button', { name: /add/i });
@@ -132,7 +131,7 @@ describe('TrainerPanel', () => {
     await user.click(createButton);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(window.fetch).toHaveBeenCalledWith(
         '/api/trainer/questions',
         expect.objectContaining({ method: 'POST' })
       );
@@ -144,21 +143,21 @@ describe('TrainerPanel', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+        expect(window.fetch).toHaveBeenCalledWith('/api/questions');
       });
 
       const qButton = await screen.findByText('Question 1');
       await user.click(qButton);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith('/api/trainer/questions/1/draft');
+        expect(window.fetch).toHaveBeenCalledWith('/api/trainer/questions/1/draft');
       });
 
       const genBaselineButton = Array.from(document.querySelectorAll('button')).find(el => el.textContent.includes('Generate Baseline'));
       await user.click(genBaselineButton);
 
       await waitFor(() => {
-         expect(global.fetch).toHaveBeenCalledWith(
+         expect(window.fetch).toHaveBeenCalledWith(
              '/api/questions/1/baseline',
              expect.objectContaining({ method: 'POST' })
          )
