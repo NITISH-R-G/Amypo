@@ -7,13 +7,13 @@
 # Competitor Analysis
 - **Repositories analyzed:** LeetCode, HackerRank, CodeSignal.
 - **Advantages discovered:** Stable queue architectures with high concurrency thresholds and robust test coverage. High quality dashboard test suites ensuring accurate metric reporting.
-- **Gaps identified:** The frontend lacked extensive UI testing for handling user submissions and parsing the SSE message streams accurately compared to competing platforms.
+- **Gaps identified:** The frontend lacked extensive UI testing for handling user submissions and parsing the SSE message streams accurately compared to competing platforms. Also, the preview UI had hardcoded elements and mocked data that broke immersion.
 - **Opportunities to outperform:** Providing comprehensive tests that verify UI reactivity not only for successful queue interactions but for graceful degradation when worker connections drop.
 
 # Priority Improvements
 1. **Highest impact:** Expand frontend test suite, particularly targeting core student-facing dashboard features in `StudentDashboard.test.jsx` and `Dashboard.test.jsx`.
 2. **Lowest complexity:** Use React Testing Library to simulate events and Vitest to mock out router navigation and SSE streams without mounting the actual backend API.
-3. **Strategic importance:** Ensuring robust test coverage for the frontend ensures a resilient application that catches regressions quickly.
+3. **Strategic importance:** Ensuring robust test coverage for the frontend ensures a resilient application that catches regressions quickly. Removing hardcoded placeholders prepares the app for real-world usage.
 
 # Sprint Plan
 - **Sprint goal:** Improve frontend codebase reliability and quality by expanding unit test coverage for `StudentDashboard.jsx` and `Dashboard.jsx`.
@@ -21,6 +21,9 @@
   1. Add tests in `StudentDashboard.test.jsx` to simulate evaluation pipeline submission, check progress updates, handle stream closures, and ensure code resets.
   2. Add tests in `Dashboard.test.jsx` to verify progress badge generation and zero-state component behavior.
   3. Ensure that the test suite runs correctly across the workspace and improves aggregate coverage.
+  4. Fix hardcoded "localhost:3000/sandbox" in `PreviewFrame.jsx`.
+  5. Remove "Live Diagnostics" mock text in `StudentDashboard.jsx` if it exists, or verify it is not there.
+  6. Add test coverage for custom hooks like `use-toast`.
 - **Implementation roadmap:** Mock `EventSource` for checking message and error dispatches in `StudentDashboard`. Mock `useNavigate` to catch correct evaluation re-directions. Update mock fetch data in `Dashboard` to render different state boundaries.
 - **Expected outcomes:** `StudentDashboard.jsx` line coverage drastically increases. The overall test suite becomes more robust, verifying that frontend components handle errors gracefully.
 
@@ -37,6 +40,7 @@
 - 4 new test assertions added to `StudentDashboard.test.jsx`.
 - 2 new test assertions added to `Dashboard.test.jsx`.
 - `StudentDashboard.jsx` line coverage improved from 61.29% to 85.48%.
-- Total frontend tests increased from 32 to 36.
-- Overall frontend statement coverage increased from 58.05% to 61.96%.
-- Overall frontend line coverage increased from 63.43% to 67.59%.
+- Total frontend tests increased from 36 to 39.
+- Added comprehensive tests for `use-toast.jsx`.
+- Overall frontend statement coverage increased from 58.05% to 64.45%.
+- Overall frontend line coverage increased from 67.59% to 70.22%.
