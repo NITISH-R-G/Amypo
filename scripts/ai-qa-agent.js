@@ -198,6 +198,7 @@ async function main() {
 
   // Output to GitHub Step Summary if running in CI
   if (process.env.GITHUB_STEP_SUMMARY) {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md);
   }
 
