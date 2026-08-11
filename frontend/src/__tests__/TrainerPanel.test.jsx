@@ -60,4 +60,28 @@ describe('TrainerPanel', () => {
       }));
     });
   });
+
+  it('interacts with builder and visual test spec', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Question 1')).toBeInTheDocument();
+    });
+
+    const builderTab = screen.getByText('Content Builder');
+    await user.click(builderTab);
+    expect(await screen.findByText(/Starter Template/)).toBeInTheDocument();
+
+    const specTitle = await screen.findByText('Visual Test Spec Builder');
+    expect(specTitle).toBeInTheDocument();
+
+    // Click add test button (Add Assertion)
+    const addAssertionButton = screen.getByRole('button', { name: /Add Assertion/i });
+    await user.click(addAssertionButton);
+
+    // After clicking, an assertion type dropdown should appear (label 'Assertion Type')
+    const els = await screen.findAllByText('Assertion Type');
+    expect(els.length).toBeGreaterThan(0);
+  });
 });
