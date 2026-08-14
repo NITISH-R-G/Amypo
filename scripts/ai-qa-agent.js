@@ -116,7 +116,9 @@ function calculateScores(data) {
     securityScore -= Math.min(vulnPenalty, 40);
   }
 
-  if (data.secretlint && data.secretlint.some(file => file.messages.length > 0)) {
+  const hasSecretsDetected = data.secretlint && data.secretlint.some(file => file.messages.length > 0);
+
+  if (hasSecretsDetected) {
     securityScore -= 50; // Heavy penalty for secrets
   }
 
@@ -211,7 +213,8 @@ async function main() {
 
   // Determine if CI should fail based on strict criteria
   let failCI = false;
-  if (data.secretlint && data.secretlint.some(file => file.messages.length > 0)) {
+  const hasSecretsToFail = data.secretlint && data.secretlint.some(file => file.messages.length > 0);
+  if (hasSecretsToFail) {
     console.error("❌ CRITICAL: Secrets detected in repository.");
     failCI = true;
   }
