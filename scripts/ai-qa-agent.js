@@ -76,6 +76,11 @@ function parseReports() {
   return data;
 }
 
+function hasSecrets(reportData) {
+  if (!reportData || !reportData.secretlint) return false;
+  return reportData.secretlint.some(file => file.messages && file.messages.length > 0);
+}
+
 function calculateScores(data) {
   // Simple synthetic metric calculation
   let qualityScore = 100;
@@ -116,7 +121,7 @@ function calculateScores(data) {
     securityScore -= Math.min(vulnPenalty, 40);
   }
 
-  if (data.secretlint && data.secretlint.some(file => file.messages && file.messages.length > 0)) {
+  if (hasSecrets(data)) {
     securityScore -= 50; // Heavy penalty for secrets
   }
 
@@ -150,7 +155,7 @@ async function analyzeWithAI(reportsData, scores) {
     - Dead Code (Knip) issues: ${reportsData.knip && Object.keys(reportsData.knip).length > 0 ? 'Yes' : 'No'}
     - ESLint Files with errors: ${reportsData.eslint ? reportsData.eslint.filter(f => f.errorCount > 0).length : 'Unknown'}
     - Duplication percentage: ${reportsData.jscpd ? reportsData.jscpd.statistics?.total?.percentage + '%' : 'Unknown'}
-    - Secrets detected: ${reportsData.secretlint && reportsData.secretlint.some(file => file.messages && file.messages.length > 0) ? 'Yes' : 'No'}
+    - Secrets detected: ${hasSecrets(reportsData) ? 'Yes' : 'No'}
     - Vulnerabilities: ${reportsData.audit ? JSON.stringify(reportsData.audit.metadata.vulnerabilities) : 'Unknown'}
   `;
 
@@ -211,7 +216,7 @@ async function main() {
 
   // Determine if CI should fail based on strict criteria
   let failCI = false;
-  if (data.secretlint && data.secretlint.some(file => file.messages && file.messages.length > 0)) {
+  if (hasSecrets(data)) {
     console.error("❌ CRITICAL: Secrets detected in repository.");
     failCI = true;
   }
