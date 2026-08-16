@@ -18,6 +18,24 @@ function genId() {
   return count.toString()
 }
 
+const toastTimeouts = new Map()
+
+const addToRemoveQueue = (toastId) => {
+  if (toastTimeouts.has(toastId)) {
+    return
+  }
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId)
+    dispatch({
+      type: "REMOVE_TOAST",
+      toastId: toastId,
+    })
+  }, TOAST_REMOVE_DELAY)
+
+  toastTimeouts.set(toastId, timeout)
+}
+
 const toastListeners = new Set()
 
 let memoryState = { toasts: [] }
@@ -47,19 +65,23 @@ function reducer(state, action) {
 
     case "DISMISS_TOAST": {
       const { toastId } = action
+
+      // ! Side effects ! - This could be extracted into a dispatch helper
       if (toastId) {
-        return {
-          ...state,
-          toasts: state.toasts.map((t) =>
-            t.id === toastId || toastId === undefined
-              ? { ...t, open: false }
-              : t
-          ),
-        }
+        addToRemoveQueue(toastId)
+      } else {
+        state.toasts.forEach((toast) => {
+          addToRemoveQueue(toast.id)
+        })
       }
+
       return {
         ...state,
-        toasts: state.toasts.map((t) => ({ ...t, open: false })),
+        toasts: state.toasts.map((t) =>
+          t.id === toastId || toastId === undefined
+            ? { ...t, open: false }
+            : t
+        ),
       }
     }
     case "REMOVE_TOAST":
