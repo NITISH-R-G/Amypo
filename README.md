@@ -74,11 +74,11 @@ The `assessment-engine` repository consists of 3 services:
 
 ## Recent Code Changes
 
+- docs: auto-generate repository documentation and diagrams [skip ci] (467372a)
 - docs: auto-generate repository documentation and diagrams [skip ci] (5e4dd2b)
 - docs: auto-generate repository documentation and diagrams [skip ci] (3432a7c)
 - docs: auto-generate repository documentation and diagrams [skip ci] (83644c1)
 - docs: auto-generate repository documentation and diagrams [skip ci] (caed614)
-- docs: auto-generate repository documentation and diagrams [skip ci] (1e33cd3)
 
 ## Infrastructure
 
