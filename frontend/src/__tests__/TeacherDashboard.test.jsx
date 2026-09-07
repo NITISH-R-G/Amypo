@@ -1,16 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import TeacherDashboard from '../pages/TeacherDashboard';
 import { BrowserRouter } from 'react-router-dom';
+
+vi.mock('../components/ui/use-toast', () => ({
+  useToast: () => ({
+    toast: vi.fn(),
+  }),
+}));
 
 describe('TeacherDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn((url) => {
+    window.fetch = vi.fn((url, options) => {
       if (url.includes('/api/questions')) {
+        if (options?.method === 'DELETE') {
+            return Promise.resolve({ ok: true });
+        }
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ questions: [{ id: 1, title: 'Modern Frontend Fundamentals Question 1' }] })
+          json: () => Promise.resolve({ questions: [{ id: 1, title: 'Modern Frontend Fundamentals Question 1', difficulty: 'easy', category: 'react' }] })
         });
       }
       if (url.includes('/api/submissions')) {
@@ -21,6 +31,9 @@ describe('TeacherDashboard', () => {
       }
       return Promise.reject(new Error('not found'));
     });
+
+    vi.spyOn(window, 'confirm').mockImplementation(() => true);
+    vi.spyOn(window, 'alert').mockImplementation(() => {});
   });
 
   const renderComponent = () => render(
@@ -33,8 +46,8 @@ describe('TeacherDashboard', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
-      expect(global.fetch).toHaveBeenCalledWith('/api/submissions?limit=200');
+      expect(window.fetch).toHaveBeenCalledWith('/api/questions');
+      expect(window.fetch).toHaveBeenCalledWith('/api/submissions?limit=200');
     });
 
     // Check elements after loading
@@ -43,5 +56,22 @@ describe('TeacherDashboard', () => {
     expect(screen.getByText('Modern Frontend Fundamentals Question 1')).toBeInTheDocument();
     expect(screen.getByText(/1 Questions/)).toBeInTheDocument();
     expect(screen.getByText(/1 Students Enrolled/)).toBeInTheDocument();
+  });
+
+  it('allows a teacher to delete a question', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      await waitFor(() => {
+        expect(window.fetch).toHaveBeenCalledWith('/api/questions');
+      });
+
+      const deleteButton = await screen.findByRole('button', { name: /delete/i });
+      await act(async () => {
+          await user.click(deleteButton);
+      });
+
+      expect(window.confirm).toHaveBeenCalled();
+      expect(window.fetch).toHaveBeenCalledWith('/api/questions/1', expect.objectContaining({ method: 'DELETE' }));
   });
 });
