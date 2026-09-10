@@ -1,7 +1,21 @@
+/**
+ * @vitest-environment jsdom
+ */
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import TeacherDashboard from '../pages/TeacherDashboard';
 import { BrowserRouter } from 'react-router-dom';
+import '@testing-library/jest-dom/vitest';
+
+vi.mock('../pages/TrainerPanel', () => ({
+  default: () => <div data-testid="trainer-panel">Trainer Panel Mock</div>
+}));
+
+vi.mock('react-chartjs-2', () => ({
+  Bar: () => <div data-testid="bar-chart" />,
+  Doughnut: () => <div data-testid="doughnut-chart" />
+}));
 
 describe('TeacherDashboard', () => {
   beforeEach(() => {
