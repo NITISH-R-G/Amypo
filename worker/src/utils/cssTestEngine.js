@@ -39,7 +39,7 @@ async function executeCssTests(page, cssTestSpec) {
             let rules;
             try {
               rules = sheet.cssRules || sheet.rules;
-            } catch (e) {
+            } catch (ignoredError) { // NOSONAR
               continue; // ignore cross-origin/security errors
             }
             if (!rules) continue;
@@ -62,7 +62,7 @@ async function executeCssTests(page, cssTestSpec) {
             hint = `Element not found: ${test.selector}`;
           }
         }
-      } catch (e) {
+      } catch (ignoredError) { // NOSONAR
         hint = `Error parsing CSS properties target`;
       }
       return { 

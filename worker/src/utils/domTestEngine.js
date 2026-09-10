@@ -60,7 +60,7 @@ async function executeDomTests(page, domTestSpec) {
             hint = `Expected ${assertion} to match "${expected}" for ${test.selector}`;
           }
         }
-      } catch (e) {
+      } catch (ignoredError) { // NOSONAR
         hint = `Invalid selector: ${test.selector}`;
       }
       return { 
