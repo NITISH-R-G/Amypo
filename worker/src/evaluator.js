@@ -543,9 +543,9 @@ html, body {
                 let isRow = true;
                 let prevTop = -1;
                 for (let child of c.children) {
-                   const bounds = child.getBoundingClientRect();
-                   if (prevTop === -1) prevTop = bounds.top;
-                   else if (Math.abs(bounds.top - prevTop) > 10) { isRow = false; break; }
+                   const top = child.offsetTop;
+                   if (prevTop === -1) prevTop = top;
+                   else if (Math.abs(top - prevTop) > 10) { isRow = false; break; }
                 }
                 if (isRow && c.children.length > 1 && !style.className?.includes('flex')) {
                    hints.push(`Potential missing 'display: flex' on element masquerading as a row: <${c.tagName.toLowerCase()} class="${c.className}">`);
