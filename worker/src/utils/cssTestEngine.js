@@ -28,19 +28,25 @@ async function executeCssTests(page, cssTestSpec) {
       return normalizedActual === expected;
     };
 
+    let currentId = Date.now();
+    const getId = () => {
+         currentId++;
+         return currentId.toString(16);
+    }
+
     return spec.map(test => {
       let passed = false;
       let hint = test.hint || `Failed CSS test for ${test.selector} { ${test.property}: ${test.expected} }`;
       try {
         if (test.testType === 'ruleExists') {
           const needle = test.selectorContains || test.selector || '';
-          passed = false;
           for (const sheet of Array.from(document.styleSheets || [])) {
             let rules;
             try {
               rules = sheet.cssRules || sheet.rules;
             } catch (e) {
-              continue; // ignore cross-origin/security errors
+              console.warn(e);
+              continue;
             }
             if (!rules) continue;
             for (const rule of Array.from(rules)) {
@@ -63,10 +69,12 @@ async function executeCssTests(page, cssTestSpec) {
           }
         }
       } catch (e) {
+        console.warn(e);
         hint = `Error parsing CSS properties target`;
       }
+
       return { 
-        testId: test.id || Math.random().toString(36).substr(2, 9), 
+        testId: test.id || getId(),
         passed, 
         hint, 
         selector: test.selector 
