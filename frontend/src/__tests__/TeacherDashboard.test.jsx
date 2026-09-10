@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import TeacherDashboard from '../pages/TeacherDashboard';
 import { BrowserRouter } from 'react-router-dom';
 
@@ -7,6 +8,12 @@ describe('TeacherDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     global.fetch = vi.fn((url) => {
+      if (url.includes('/api/questions/1')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true })
+        });
+      }
       if (url.includes('/api/questions')) {
         return Promise.resolve({
           ok: true,
@@ -43,5 +50,21 @@ describe('TeacherDashboard', () => {
     expect(screen.getByText('Modern Frontend Fundamentals Question 1')).toBeInTheDocument();
     expect(screen.getByText(/1 Questions/)).toBeInTheDocument();
     expect(screen.getByText(/1 Students Enrolled/)).toBeInTheDocument();
+  });
+
+  it('deletes a question when confirmed', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderComponent();
+
+    const deleteButton = await screen.findByTitle('Delete question');
+    expect(deleteButton).toBeInTheDocument();
+
+    // Reverting to wrapping user interaction in act manually if act warning pops up for sync call
+    const user = userEvent.setup();
+    await user.click(deleteButton);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions/1', { method: 'DELETE' });
+    });
   });
 });
