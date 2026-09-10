@@ -47,6 +47,16 @@ function reducer(state, action) {
 
     case "DISMISS_TOAST": {
       const { toastId } = action
+
+      // Add toast removal timeout
+      if (toastId) {
+        addToRemoveQueue(toastId)
+      } else {
+        state.toasts.forEach((toast) => {
+          addToRemoveQueue(toast.id)
+        })
+      }
+
       if (toastId) {
         return {
           ...state,
@@ -74,6 +84,24 @@ function reducer(state, action) {
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
       }
   }
+}
+
+const toastTimeouts = new Map()
+
+const addToRemoveQueue = (toastId) => {
+  if (toastTimeouts.has(toastId)) {
+    return
+  }
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId)
+    dispatch({
+      type: "REMOVE_TOAST",
+      toastId: toastId,
+    })
+  }, TOAST_REMOVE_DELAY)
+
+  toastTimeouts.set(toastId, timeout)
 }
 
 function toast({ ...props }) {
@@ -146,4 +174,4 @@ function Toaster() {
   )
 }
 
-export { useToast, toast, Toaster }
+export { useToast, toast, Toaster, dispatch }
