@@ -6,7 +6,7 @@
     *   Security measures in place: Helmet, compression, rate limiting in the backend.
     *   Sandboxed worker for code evaluation using Puppeteer, disabling potentially dangerous browser APIs.
 *   **Weaknesses:**
-    *   Frontend mock data (e.g., hardcoded "Live Diagnostics") needs to be replaced with real-time data or properly removed/hidden until implemented.
+    *   Frontend mock data has been partially addressed (e.g., hardcoded "Live Diagnostics" was removed). Further mock data needs to be replaced with real-time data or properly removed/hidden until implemented.
     *   Potential edge cases in evaluating complex HTML/CSS interactions.
     *   Testing coverage seems limited to a basic health check on the backend. No comprehensive unit/integration tests found.
 *   **Risks:**
@@ -34,8 +34,8 @@
 
 *   **Sprint Goal:** Improve Developer Experience, Testing, and UI Polish.
 *   **Tasks:**
-    1.  Fix hardcoded "localhost:3000/sandbox" in `PreviewFrame.jsx`.
-    2.  Update "Live Diagnostics" in `StudentDashboard.jsx` to reflect actual analysis or remove it.
+    1.  (Completed) Fix hardcoded "localhost:3000/sandbox" in `PreviewFrame.jsx`.
+    2.  (Completed) Update "Live Diagnostics" in `StudentDashboard.jsx` to reflect actual analysis or remove it.
     3.  Set up a testing framework for the frontend and expand backend tests.
     4.  Review and update dependency versions for security and performance.
 *   **Implementation roadmap:** Start with UI fixes, then move to testing infrastructure, and finally dependency updates.
