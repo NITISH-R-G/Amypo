@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import TeacherDashboard from '../pages/TeacherDashboard';
-import { BrowserRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
+
+vi.mock('../pages/TrainerPanel', () => ({
+  default: ({ initialTab }) => <div data-testid={`trainer-panel-mock-${initialTab}`}>Trainer Panel Mock ({initialTab})</div>
+}));
 
 describe('TeacherDashboard', () => {
   beforeEach(() => {
@@ -23,10 +28,10 @@ describe('TeacherDashboard', () => {
     });
   });
 
-  const renderComponent = () => render(
-    <BrowserRouter>
+  const renderComponent = (initialEntries = ['/']) => render(
+    <MemoryRouter initialEntries={initialEntries}>
       <TeacherDashboard />
-    </BrowserRouter>
+    </MemoryRouter>
   );
 
   it('renders the teacher dashboard and fetches course data', async () => {
@@ -43,5 +48,25 @@ describe('TeacherDashboard', () => {
     expect(screen.getByText('Modern Frontend Fundamentals Question 1')).toBeInTheDocument();
     expect(screen.getByText(/1 Questions/)).toBeInTheDocument();
     expect(screen.getByText(/1 Students Enrolled/)).toBeInTheDocument();
+  });
+
+  it('navigates to course builder tab', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    const builderTab = await screen.findByRole('button', { name: /Spec Builder/i });
+    await user.click(builderTab);
+
+    expect(await screen.findByTestId('trainer-panel-mock-builder')).toBeInTheDocument();
+  });
+
+  it('navigates to analytics tab', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    const analyticsTab = await screen.findByRole('button', { name: /Analytics/i });
+    await user.click(analyticsTab);
+
+    expect(await screen.findByTestId('trainer-panel-mock-analytics')).toBeInTheDocument();
   });
 });
