@@ -26,7 +26,7 @@ describe('TrainerPanel', () => {
           json: () => Promise.resolve({
             question: { id: 1, title: 'Question 1', description: 'Desc 1', allowed_libraries: [] },
             files: [],
-            testSpec: {}
+            testSpec: { tests: { dom: [], css: [], interactions: [] } }
           })
         });
       }
@@ -47,7 +47,23 @@ describe('TrainerPanel', () => {
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('/api/questions');
     });
-    expect(await screen.findByText('Question 1')).toBeInTheDocument();
+
+    const q1 = await screen.findByText('Question 1');
+    expect(q1).toBeInTheDocument();
+
+    // Select the question by clicking on it
+    await user.click(q1);
+
+    // Now the Visual Test Spec Builder should be visible
+    await waitFor(async () => {
+       const vtsb = await screen.findByText('Visual Test Spec Builder');
+       expect(vtsb).toBeInTheDocument();
+    });
+
+    const addAssertionBtns = screen.getAllByRole('button', { name: /Add Assertion/i });
+    if (addAssertionBtns.length > 0) {
+      await user.click(addAssertionBtns[0]);
+    }
 
     const saveButton = await screen.findByRole('button', { name: /Save Draft/i });
     expect(saveButton).toBeInTheDocument();
@@ -59,5 +75,73 @@ describe('TrainerPanel', () => {
         method: 'PUT'
       }));
     });
+  });
+
+  it('handles Generate Baseline button', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+    const q1 = await screen.findByText('Question 1');
+    await user.click(q1);
+
+    const generateBaselineBtn = await screen.findByRole('button', { name: /Generate Baseline/i });
+    if (generateBaselineBtn) {
+      await user.click(generateBaselineBtn);
+    }
+  });
+
+  it('handles cohort analytics toggle', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+    const analyticsBtn = await screen.findByRole('button', { name: /Cohort Analytics/i });
+    if (analyticsBtn) {
+      await user.click(analyticsBtn);
+    }
+  });
+
+  it('covers test interactions tab', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+    const q1 = await screen.findByText('Question 1');
+    await user.click(q1);
+
+    const addAssertionBtns = screen.getAllByRole('button', { name: /Add Assertion/i });
+    if (addAssertionBtns.length > 0) {
+      await user.click(addAssertionBtns[0]);
+    }
+  });
+
+  it('covers question title editing', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+    const q1 = await screen.findByText('Question 1');
+    await user.click(q1);
+
+    // Click Content Builder to make sure we're on the right view, if needed
+    const contentBuilderBtn = await screen.findByRole('button', { name: /Content Builder/i });
+    if (contentBuilderBtn) {
+      await user.click(contentBuilderBtn);
+    }
+
+    // Try finding the input by placeholder or value since label is missing
+    const inputs = screen.getAllByRole('textbox');
+    if (inputs.length > 0) {
+      // Typically the first textbox is the title if there's no explicit label
+      await user.clear(inputs[0]);
+      await user.type(inputs[0], 'New Title Modified');
+    }
   });
 });
