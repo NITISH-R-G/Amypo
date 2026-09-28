@@ -1,0 +1,35 @@
+<<<<<<< SEARCH
+  if (data.secretlint && data.secretlint.length > 0) {
+    securityScore -= 50; // Heavy penalty for secrets
+  }
+
+  return {
+=======
+  if (data.secretlint && data.secretlint.some(file => file.messages.length > 0)) {
+    securityScore -= 50; // Heavy penalty for secrets
+  }
+
+  return {
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+    - Secrets detected: ${reportsData.secretlint && reportsData.secretlint.length > 0 ? 'Yes' : 'No'}
+    - Vulnerabilities: ${reportsData.audit ? JSON.stringify(reportsData.audit.metadata.vulnerabilities) : 'Unknown'}
+=======
+    - Secrets detected: ${reportsData.secretlint && reportsData.secretlint.some(file => file.messages.length > 0) ? 'Yes' : 'No'}
+    - Vulnerabilities: ${reportsData.audit ? JSON.stringify(reportsData.audit.metadata.vulnerabilities) : 'Unknown'}
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+  // Determine if CI should fail based on strict criteria
+  let failCI = false;
+  if (data.secretlint && data.secretlint.length > 0) {
+    console.error("❌ CRITICAL: Secrets detected in repository.");
+    failCI = true;
+  }
+=======
+  // Determine if CI should fail based on strict criteria
+  let failCI = false;
+  if (data.secretlint && data.secretlint.some(file => file.messages.length > 0)) {
+    console.error("❌ CRITICAL: Secrets detected in repository.");
+    failCI = true;
+  }
+>>>>>>> REPLACE

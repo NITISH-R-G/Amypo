@@ -1,0 +1,68 @@
+<<<<<<< SEARCH
+function calculateScores(data) {
+  // Simple synthetic metric calculation
+  let qualityScore = 100;
+  let securityScore = 100;
+  let maintainabilityScore = 100;
+
+  // Reduce quality score based on ESLint errors
+  if (data.eslint) {
+    const errorCount = data.eslint.reduce((acc, file) => acc + file.errorCount, 0);
+    qualityScore -= Math.min(errorCount * 2, 50);
+  }
+
+  // Reduce quality score based on Prettier formatting errors
+  if (data.prettier && data.prettier.includes('forgot to run Prettier')) {
+    qualityScore -= 20;
+  }
+
+  // Reduce quality score based on TypeScript compilation errors
+  if (data.tsc && data.tsc.includes('error TS')) {
+    qualityScore -= 30;
+  }
+
+  // Reduce maintainability based on duplication
+  if (data.jscpd && data.jscpd.statistics) {
+    const dupPercentage = data.jscpd.statistics.total.percentage;
+    maintainabilityScore -= Math.min(parseFloat(dupPercentage) * 2, 50);
+  }
+
+  // Reduce maintainability based on dead code
+  if (data.knip && Object.keys(data.knip).length > 0) {
+    maintainabilityScore -= 20;
+  }
+=======
+function calculateScores(data) {
+  // Simple synthetic metric calculation
+  let qualityScore = 100;
+  let securityScore = 100;
+  let maintainabilityScore = 100;
+
+  // Reduce quality score based on ESLint errors
+  if (data.eslint) {
+    const errorCount = data.eslint.reduce((acc, file) => acc + file.errorCount, 0);
+    const warningCount = data.eslint.reduce((acc, file) => acc + file.warningCount, 0);
+    qualityScore -= Math.min((errorCount * 2) + warningCount, 40);
+  }
+
+  // Reduce quality score based on Prettier formatting errors
+  if (data.prettier && data.prettier.includes('forgot to run Prettier')) {
+    qualityScore -= 20;
+  }
+
+  // Reduce quality score based on TypeScript compilation errors
+  if (data.tsc && data.tsc.includes('error TS')) {
+    qualityScore -= 30;
+  }
+
+  // Reduce maintainability based on duplication
+  if (data.jscpd && data.jscpd.statistics) {
+    const dupPercentage = data.jscpd.statistics.total.percentage;
+    maintainabilityScore -= Math.min(parseFloat(dupPercentage) * 2, 50);
+  }
+
+  // Reduce maintainability based on dead code
+  if (data.knip && Object.keys(data.knip).length > 0) {
+    maintainabilityScore -= 20;
+  }
+>>>>>>> REPLACE
