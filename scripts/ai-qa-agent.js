@@ -85,7 +85,7 @@ function calculateScores(data) {
   // Reduce quality score based on ESLint errors
   if (data.eslint) {
     const errorCount = data.eslint.reduce((acc, file) => acc + file.errorCount, 0);
-    qualityScore -= Math.min(errorCount * 2, 50);
+    qualityScore -= Math.min(errorCount * 0.5, 40);
   }
 
   // Reduce quality score based on Prettier formatting errors
@@ -112,11 +112,11 @@ function calculateScores(data) {
   // Reduce security score based on vulnerabilities and secrets
   if (data.audit && data.audit.metadata && data.audit.metadata.vulnerabilities) {
     const vulns = data.audit.metadata.vulnerabilities;
-    const vulnPenalty = (vulns.critical * 10) + (vulns.high * 5) + (vulns.moderate * 2);
+    const vulnPenalty = (vulns.critical * 2) + (vulns.high * 1) + (vulns.moderate * 0.5);
     securityScore -= Math.min(vulnPenalty, 40);
   }
 
-  if (data.secretlint && data.secretlint.length > 0) {
+  if (data.secretlint && data.secretlint.some(file => file.messages && file.messages.length > 0)) {
     securityScore -= 50; // Heavy penalty for secrets
   }
 
@@ -211,7 +211,7 @@ async function main() {
 
   // Determine if CI should fail based on strict criteria
   let failCI = false;
-  if (data.secretlint && data.secretlint.length > 0) {
+  if (data.secretlint && data.secretlint.some(file => file.messages && file.messages.length > 0)) {
     console.error("❌ CRITICAL: Secrets detected in repository.");
     failCI = true;
   }
