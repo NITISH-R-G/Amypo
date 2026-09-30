@@ -29,6 +29,12 @@ function dispatch(action) {
   })
 }
 
+export function dispatchForTest(action) {
+  if (process.env.NODE_ENV === 'test') {
+    dispatch(action);
+  }
+}
+
 function reducer(state, action) {
   switch (action.type) {
     case "ADD_TOAST":

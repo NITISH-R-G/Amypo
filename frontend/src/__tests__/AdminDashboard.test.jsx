@@ -58,6 +58,34 @@ describe('AdminDashboard', () => {
     });
   });
 
+  it('removes a domain from whitelist', async () => {
+     axios.get.mockImplementation((url) => {
+      if (url === '/api/admin/whitelist') {
+        return Promise.resolve({ data: [{ id: 1, domain: 'allowed.com' }] });
+      }
+      if (url === '/api/admin/logs') {
+        return Promise.resolve({ data: [] });
+      }
+      return Promise.reject(new Error('not found'));
+    });
+    axios.delete.mockResolvedValueOnce({ data: { success: true } });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('allowed.com')).toBeInTheDocument();
+    });
+
+    const deleteBtns = screen.getAllByRole('button');
+    // find delete button by svg
+    const trashBtn = deleteBtns.find(b => b.querySelector('svg.lucide-trash-2'));
+    await userEvent.click(trashBtn);
+
+    await waitFor(() => {
+       expect(axios.delete).toHaveBeenCalledWith('/api/admin/whitelist/1');
+    });
+  });
+
   it('displays fetched domains and logs', async () => {
     axios.get.mockImplementation((url) => {
       if (url === '/api/admin/whitelist') {
