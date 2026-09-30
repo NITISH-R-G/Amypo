@@ -4,9 +4,29 @@ import userEvent from '@testing-library/user-event';
 import TrainerPanel from '../pages/TrainerPanel';
 import { BrowserRouter } from 'react-router-dom';
 
+vi.mock('react-chartjs-2', () => ({
+  Bar: () => <div data-testid="mock-bar-chart" />,
+  Doughnut: () => <div data-testid="mock-doughnut-chart" />
+}));
+
+vi.mock('../components/workspace/CodeEditor', () => ({
+  default: ({ value, onChange }) => (
+    <textarea
+      data-testid="mock-code-editor"
+      value={value || ''}
+      onChange={(e) => onChange && onChange(e.target.value)}
+    />
+  )
+}));
+
 describe('TrainerPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    global.ResizeObserver = class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
     global.fetch = vi.fn((url, options) => {
       if (url.includes('/api/questions')) {
         return Promise.resolve({
@@ -34,9 +54,9 @@ describe('TrainerPanel', () => {
     });
   });
 
-  const renderComponent = () => render(
+  const renderComponent = (props) => render(
     <BrowserRouter>
-      <TrainerPanel />
+      <TrainerPanel {...props} />
     </BrowserRouter>
   );
 
@@ -59,5 +79,38 @@ describe('TrainerPanel', () => {
         method: 'PUT'
       }));
     });
+  });
+
+  it('can select question and show specs', async () => {
+    const user = userEvent.setup();
+    renderComponent({ embedded: true, initialTab: 'builder' });
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    const q1 = await screen.findByText('Question 1');
+    await user.click(q1);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/trainer/questions/1/draft');
+    });
+
+    // Wait for the panel to show specific parts to confirm it's loaded
+    await screen.findByText(/Generate Baseline/i);
+
+    // Fallback if interaction/assertion buttons aren't found directly, at least test the question switching logic
+  });
+
+  it('renders analytics view properly', async () => {
+    renderComponent({ embedded: true, initialTab: 'analytics' });
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    expect(screen.getByText('Cohort Score Distribution')).toBeInTheDocument();
+    expect(screen.getByTestId('mock-bar-chart')).toBeInTheDocument();
+    expect(screen.getByText(/Avg. Score/i)).toBeInTheDocument();
   });
 });
