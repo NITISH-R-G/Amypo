@@ -1,12 +1,33 @@
+import "@testing-library/jest-dom";
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import TeacherDashboard from '../pages/TeacherDashboard';
 import { BrowserRouter } from 'react-router-dom';
+
+vi.mock('react-chartjs-2', () => ({
+  Bar: () => <div data-testid="chart-bar" />,
+  Doughnut: () => <div data-testid="chart-doughnut" />,
+}));
+
+vi.mock('@monaco-editor/react', () => ({
+  default: () => <div data-testid="monaco-editor" />
+}));
 
 describe('TeacherDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn((url) => {
+    global.window.alert = vi.fn();
+    if (global.window && global.window.HTMLElement) {
+      global.window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    }
+    global.fetch = vi.fn((url, options) => {
+      if (url.includes('/api/questions/1')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ success: true })
+          });
+      }
       if (url.includes('/api/questions')) {
         return Promise.resolve({
           ok: true,
@@ -43,5 +64,58 @@ describe('TeacherDashboard', () => {
     expect(screen.getByText('Modern Frontend Fundamentals Question 1')).toBeInTheDocument();
     expect(screen.getByText(/1 Questions/)).toBeInTheDocument();
     expect(screen.getByText(/1 Students Enrolled/)).toBeInTheDocument();
+  });
+
+  it('navigates between overview, spec builder, and analytics tabs', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+    expect(await screen.findByText('Modern Frontend Fundamentals Question 1')).toBeInTheDocument();
+
+    const specBuilderTab = screen.getByRole('button', { name: /Spec Builder/i });
+    await user.click(specBuilderTab);
+
+    // Spec builder embeds TrainerPanel, which has text
+    expect(await screen.findByText(/Generate Baseline/i)).toBeInTheDocument();
+
+    const analyticsTabs = screen.getAllByRole('button', { name: /Analytics/i });
+    const analyticsTab = analyticsTabs.find(btn => btn.textContent.includes("Analytics") && !btn.textContent.includes("Cohort"));
+    if (!analyticsTab) throw new Error("Analytics tab not found");
+    await user.click(analyticsTab);
+
+    // Analytics tab has specific text
+    expect(await screen.findByText(/Cohort Score Distribution/i)).toBeInTheDocument();
+
+    const overviewTab = screen.getByRole('button', { name: /Overview/i });
+    await user.click(overviewTab);
+
+    expect(await screen.findByText('Modern Frontend Fundamentals Question 1')).toBeInTheDocument();
+  });
+
+  it('deletes a question when confirmed', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+    expect(await screen.findByText('Modern Frontend Fundamentals Question 1')).toBeInTheDocument();
+
+    // Mock window.confirm
+    vi.spyOn(window, 'confirm').mockImplementation(() => true);
+
+    const deleteBtn = screen.getByTitle('Delete question');
+    await user.click(deleteBtn);
+
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('Delete Question 1'));
+    await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith('/api/questions/1', expect.objectContaining({ method: 'DELETE' }));
+    });
+
+    // UI should update to remove the question
+    expect(screen.queryByText('Modern Frontend Fundamentals Question 1')).not.toBeInTheDocument();
   });
 });
