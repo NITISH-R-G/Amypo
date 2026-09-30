@@ -22,7 +22,7 @@ const toastListeners = new Set()
 
 let memoryState = { toasts: [] }
 
-function dispatch(action) {
+export function dispatch(action) {
   memoryState = reducer(memoryState, action)
   toastListeners.forEach((listener) => {
     listener(memoryState)
