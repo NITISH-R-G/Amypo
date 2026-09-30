@@ -17,6 +17,13 @@ async function executeDomTests(page, domTestSpec) {
       'alertIncludes'
     ]);
 
+    // Simple id generator for frontend tests without using crypto or math.random
+    let currentId = Date.now();
+    const getId = () => {
+         currentId++;
+         return currentId.toString(16);
+    }
+
     return spec.map(test => {
       let passed = false;
       let hint = test.hint || `Failed DOM test for selector: ${test.selector}`;
@@ -55,16 +62,17 @@ async function executeDomTests(page, domTestSpec) {
             hint = test.hint || `Unsupported DOM assertion: ${assertion}`;
           }
 
-          // We clear default hint if we want a specific error
           if (!passed && hint === (test.hint || `Failed DOM test for selector: ${test.selector}`) && needsExpected.has(assertion)) {
             hint = `Expected ${assertion} to match "${expected}" for ${test.selector}`;
           }
         }
       } catch (e) {
+        console.error(e);
         hint = `Invalid selector: ${test.selector}`;
       }
+
       return { 
-        testId: test.id || Math.random().toString(36).substr(2, 9), 
+        testId: test.id || getId(),
         passed, 
         hint, 
         selector: test.selector 

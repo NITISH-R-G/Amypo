@@ -24,7 +24,7 @@ function calculatePartialScores(domResults, cssResults, a11yResults, staticValid
     const passed = domResults.filter(t => t.passed).length;
     const fraction = passed / domResults.length;
     scores.html = Math.round(fraction * weights.html * 10) / 10;
-    scores.js = Math.round(fraction * weights.js * 10) / 10; 
+    scores.js = Math.round(fraction * weights.js * 10) / 10;
   } else {
     scores.html = weights.html;
     scores.js = weights.js;

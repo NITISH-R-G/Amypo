@@ -10,41 +10,42 @@ async function executeInteractions(page, interactionSpec) {
     await new Promise((resolve) => setTimeout(resolve, ms));
   };
 
-  for (const step of interactionSpec) {
-    try {
-      const action = String(step?.action || '').trim().toLowerCase();
-      const selector = typeof step?.selector === 'string' ? step.selector : '';
-      const timeout = Number(step?.timeout) > 0 ? Number(step.timeout) : 2000;
+  const handleTypeAction = async (step, selector) => {
+    const valueToType = String(step?.value || '');
+    if (step?.clear) {
+      await page.click(selector, { clickCount: 3 });
+      await page.keyboard.press('Backspace');
+    }
+    await page.type(selector, valueToType, { delay: Number(step?.typingDelay) > 0 ? Number(step.typingDelay) : 10 });
+  };
 
-      if (selector && step?.waitForVisible) {
-        await page.waitForSelector(selector, { visible: true, timeout });
-      } else if (selector && step?.waitForSelector) {
-        await page.waitForSelector(selector, { timeout });
-      }
+  const handleScrollAction = async (selector) => {
+    await page.evaluate((s) => {
+      const el = document.querySelector(s);
+      if (el) el.scrollIntoView({ block: 'center', inline: 'center' });
+    }, selector);
+  };
 
-      if (action === 'click') {
+  const handleSelectAction = async (step, selector) => {
+    const values = Array.isArray(step?.value) ? step.value.map((item) => String(item)) : [String(step?.value || '')];
+    await page.select(selector, ...values);
+  };
+
+  const handleAction = async (action, step, selector, timeout) => {
+    if (action === 'click') {
         await page.click(selector);
       } else if (action === 'hover') {
         await page.hover(selector);
       } else if (action === 'type') {
-        const valueToType = String(step?.value || '');
-        if (step?.clear) {
-          await page.click(selector, { clickCount: 3 });
-          await page.keyboard.press('Backspace');
-        }
-        await page.type(selector, valueToType, { delay: Number(step?.typingDelay) > 0 ? Number(step.typingDelay) : 10 });
+        await handleTypeAction(step, selector);
       } else if (action === 'scroll') {
-        await page.evaluate((s) => {
-          const el = document.querySelector(s);
-          if (el) el.scrollIntoView({ block: 'center', inline: 'center' });
-        }, selector);
+        await handleScrollAction(selector);
       } else if (action === 'keypress') {
         await page.keyboard.press(String(step?.key || 'Enter'));
       } else if (action === 'focus') {
         await page.focus(selector);
       } else if (action === 'select') {
-        const values = Array.isArray(step?.value) ? step.value.map((item) => String(item)) : [String(step?.value || '')];
-        await page.select(selector, ...values);
+        await handleSelectAction(step, selector);
       } else if (action === 'check') {
         await page.check(selector);
       } else if (action === 'uncheck') {
@@ -58,22 +59,34 @@ async function executeInteractions(page, interactionSpec) {
         });
       } else {
         console.warn(`Unsupported interaction action: ${action}`);
-        continue;
       }
+  };
+
+  for (const step of interactionSpec) {
+    try {
+      const action = String(step?.action || '').trim().toLowerCase();
+      const selector = typeof step?.selector === 'string' ? step.selector : '';
+      const timeout = Number(step?.timeout) > 0 ? Number(step.timeout) : 2000;
+
+      if (selector && step?.waitForVisible) {
+        await page.waitForSelector(selector, { visible: true, timeout });
+      } else if (selector && step?.waitForSelector) {
+        await page.waitForSelector(selector, { timeout });
+      }
+
+      await handleAction(action, step, selector, timeout);
 
       if (step?.waitForNavigation) {
         try {
           await page.waitForNavigation({ waitUntil: 'networkidle0', timeout });
-        } catch (_) {
-          // Some interactions do not navigate; ignore quietly.
+        } catch (err) {
+          console.warn(`waitForNavigation timed out for step: ${JSON.stringify(step)}`, err.message);
         }
       }
 
       await pause(step?.delay ?? 50);
     } catch (err) {
       console.warn(`Interaction failed for step ${JSON.stringify(step)}:`, err.message);
-      // We don't throw here to allow remaining evaluation to proceed,
-      // but structural evaluation might fail later due to missed state changes.
     }
   }
 }
