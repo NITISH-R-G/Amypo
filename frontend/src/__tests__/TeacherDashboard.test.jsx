@@ -1,7 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import TeacherDashboard from '../pages/TeacherDashboard';
 import { BrowserRouter } from 'react-router-dom';
+
+vi.mock('react-chartjs-2', () => ({
+  Bar: () => null,
+  Doughnut: () => null
+}));
+
+vi.mock('../pages/TrainerPanel', () => ({
+  default: ({ initialTab }) => <div data-testid={`trainer-panel-mock-${initialTab}`}>Trainer Panel Mock</div>
+}));
 
 describe('TeacherDashboard', () => {
   beforeEach(() => {
@@ -43,5 +53,42 @@ describe('TeacherDashboard', () => {
     expect(screen.getByText('Modern Frontend Fundamentals Question 1')).toBeInTheDocument();
     expect(screen.getByText(/1 Questions/)).toBeInTheDocument();
     expect(screen.getByText(/1 Students Enrolled/)).toBeInTheDocument();
+  });
+
+  it('renders the builder tab and opens TrainerPanel mock', async () => {
+    render(
+      <BrowserRouter>
+        <TeacherDashboard />
+      </BrowserRouter>
+    );
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    const builderTab = await screen.findByRole('button', { name: /Spec Builder/i });
+    expect(builderTab).toBeInTheDocument();
+
+    await userEvent.click(builderTab);
+
+    expect(await screen.findByTestId('trainer-panel-mock-builder')).toBeInTheDocument();
+  });
+
+  it('handles fetch errors gracefully', async () => {
+    global.fetch = vi.fn(() => Promise.reject(new Error('Network error')));
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <BrowserRouter>
+        <TeacherDashboard />
+      </BrowserRouter>
+    );
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
+    consoleSpy.mockRestore();
   });
 });
