@@ -19,8 +19,17 @@ describe('TeacherDashboard', () => {
           json: () => Promise.resolve([{ id: 1, question_id: 1, student_id: 1, total_score: 95 }])
         });
       }
+      if (url.includes('/api/questions/1')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true })
+        });
+      }
       return Promise.reject(new Error('not found'));
     });
+
+    vi.spyOn(window, 'confirm').mockImplementation(() => true);
+    vi.spyOn(window, 'alert').mockImplementation(() => {});
   });
 
   const renderComponent = () => render(
@@ -43,5 +52,24 @@ describe('TeacherDashboard', () => {
     expect(screen.getByText('Modern Frontend Fundamentals Question 1')).toBeInTheDocument();
     expect(screen.getByText(/1 Questions/)).toBeInTheDocument();
     expect(screen.getByText(/1 Students Enrolled/)).toBeInTheDocument();
+  });
+
+  it('deletes a question when confirmed', async () => {
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Modern Frontend Fundamentals Question 1')).toBeInTheDocument();
+    });
+
+    const deleteButtons = screen.getAllByTitle('Delete question');
+    expect(deleteButtons.length).toBeGreaterThan(0);
+
+    deleteButtons[0].click();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions/1', { method: 'DELETE' });
+    });
+
+    expect(screen.queryByText('Modern Frontend Fundamentals Question 1')).not.toBeInTheDocument();
   });
 });
