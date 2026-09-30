@@ -146,4 +146,12 @@ function Toaster() {
   )
 }
 
-export { useToast, toast, Toaster }
+function dispatchForTest(action) {
+  // eslint-disable-next-line no-undef
+  if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === "test") {
+      dispatch(action);
+  }
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export { useToast, toast, Toaster, dispatchForTest }

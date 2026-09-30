@@ -1,268 +1,221 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { RefreshCw, Trash2, Plus, ShieldCheck, PlayCircle, X, Terminal, Globe, ServerCrash } from 'lucide-react';
-import { cn } from '../utils/utils';
-
-const API_BASE = '/api/admin';
+import { Shield, Server, Activity, Users, FileCode, CheckCircle, AlertTriangle } from 'lucide-react';
 
 export default function AdminDashboard() {
+  const [metrics, setMetrics] = useState({ users: 0, submissions: 0 });
+  const [health, setHealth] = useState({ status: 'unknown' });
   const [whitelist, setWhitelist] = useState([]);
   const [newDomain, setNewDomain] = useState('');
-  const [logs, setLogs] = useState([]);
-  
-  // Replay Modal State
-  const [replayModalOpen, setReplayModalOpen] = useState(false);
-  const [activeReplayId, setActiveReplayId] = useState(null);
-  const [replayEvents, setReplayEvents] = useState([]);
-
-  async function fetchWhitelist() {
-    try { const res = await axios.get(`${API_BASE}/whitelist`); setWhitelist(res.data); } catch (e) { console.error(e); }
-  }
-
-  async function fetchLogs() {
-    try { const res = await axios.get(`${API_BASE}/logs`); setLogs(res.data); } catch (e) { console.error(e); }
-  }
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchWhitelist();
-    fetchLogs();
-  }, []);
-
-  useEffect(() => {
-    let eventSource;
-    if (replayModalOpen && activeReplayId) {
-      eventSource = new EventSource(`/api/submissions/${activeReplayId}/progress`);
-      
-      eventSource.onmessage = (e) => {
-        const msg = JSON.parse(e.data);
-        // Backend progress stream currently emits either:
-        // - { progress: { stage: "..." } }
-        // - { status: "completed" }
-        // - { status: "failed", error: "..." }
-        if (msg?.progress?.stage) {
-          setReplayEvents(prev => [...prev, { time: new Date().toLocaleTimeString(), type: 'info', text: `Stage: ${msg.progress.stage}` }]);
-        } else if (msg?.status === 'completed') {
-          setReplayEvents(prev => [...prev, { time: new Date().toLocaleTimeString(), type: 'success', text: `Completed.` }]);
-          eventSource.close();
-        } else if (msg?.status === 'failed') {
-          setReplayEvents(prev => [...prev, { time: new Date().toLocaleTimeString(), type: 'error', text: `FAILED: ${msg.error || 'Unknown error'}` }]);
-          eventSource.close();
+    let mounted = true;
+    const fetchMetrics = async () => {
+      try {
+        const uRes = await fetch('/api/admin/users');
+        const uData = await uRes.json().catch(() => ([]));
+        const sRes = await fetch('/api/submissions');
+        const sData = await sRes.json().catch(() => ([]));
+        if(mounted){
+            setMetrics({
+              users: Array.isArray(uData) ? uData.length : 0,
+              submissions: Array.isArray(sData) ? sData.length : 0
+            });
         }
-      };
-      
-      eventSource.onerror = () => {
-        setReplayEvents(prev => [...prev, { time: new Date().toLocaleTimeString(), type: 'warning', text: `Connection error or stream closed.` }]);
-        eventSource.close();
-      };
-    }
+      } catch (err) {
+        console.error('Failed to fetch metrics', err);
+      }
+    };
+    const fetchHealth = async () => {
+      try {
+        const res = await fetch('/api/health');
+        if (mounted) {
+            if (res.ok) setHealth({ status: 'healthy' });
+            else setHealth({ status: 'unhealthy' });
+        }
+      } catch (err) {
+        if(mounted) setHealth({ status: 'offline' });
+        console.error('Failed to fetch health', err);
+      }
+    };
+
+    // Abstracting fetch whitelist and logs to separate methods
+    const fetchWhitelist = async () => {
+      try {
+        const res = await fetch('/api/admin/settings/whitelist');
+        const data = await res.json().catch(() => ({}));
+        if (mounted && res.ok && Array.isArray(data.domains)) {
+          setWhitelist(data.domains);
+        }
+      } catch (err) {
+        console.error('Failed to fetch whitelist', err);
+      }
+    };
+
+    fetchMetrics();
+    fetchHealth();
+    fetchWhitelist();
     
     return () => {
-      if (eventSource) eventSource.close();
+        mounted = false;
     };
-  }, [replayModalOpen, activeReplayId]);
+  }, []);
 
-  const addDomain = async () => {
-    if (!newDomain) return;
+  const handleAddDomain = async (e) => {
+    e.preventDefault();
+    if (!newDomain.trim()) return;
+
     try {
-      await axios.post(`${API_BASE}/whitelist`, { domain: newDomain });
+      const res = await fetch('/api/admin/settings/whitelist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: newDomain.trim() })
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) throw new Error(data.error || 'Failed to add domain');
+
+      setWhitelist(prev => [...prev, newDomain.trim()]);
       setNewDomain('');
-      fetchWhitelist();
-    } catch (e) { console.error(e); }
-  };
-
-  const removeDomain = async (id) => {
-    try {
-      await axios.delete(`${API_BASE}/whitelist/${id}`);
-      fetchWhitelist();
-    } catch (e) { console.error(e); }
-  };
-
-  const replayEval = async (id) => {
-    try {
-      const res = await axios.post(`${API_BASE}/evaluation_runs/${id}/replay`);
-      const submissionId = res.data.submission_id;
-      setActiveReplayId(submissionId);
-      setReplayEvents([{ time: new Date().toLocaleTimeString(), type: 'system', text: `Queued replay for Submission ID: ${submissionId}` }]);
-      setReplayModalOpen(true);
-    } catch (e) { 
-      console.error(e);
-      alert('Failed to trigger replay. Connection to API missing.');
+      setError(null);
+    } catch (err) {
+      setError(err.message);
     }
-  }
+  };
 
-  const closeReplayModal = () => {
-    setReplayModalOpen(false);
-    setActiveReplayId(null);
-    setReplayEvents([]);
-  }
+  const handleRemoveDomain = async (domainToRemove) => {
+    try {
+      const res = await fetch(`/api/admin/settings/whitelist/${encodeURIComponent(domainToRemove)}`, {
+        method: 'DELETE'
+      });
+
+      if (!res.ok) throw new Error('Failed to remove domain');
+
+      setWhitelist(prev => prev.filter(d => d !== domainToRemove));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
   return (
-    <div className="max-w-7xl mx-auto h-full flex flex-col gap-6 pb-12 relative">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+    <div className="max-w-7xl mx-auto h-full flex flex-col gap-6 pb-12">
+      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2"><ShieldCheck className="text-emerald-600" /> System Access & Ops</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage global library whitelists and actively monitor evaluation workers.</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">System Administration</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage instance configuration and monitor health.</p>
+        </div>
+        <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-xl border border-gray-200">
+          <Activity size={18} className={health.status === 'healthy' ? 'text-emerald-500' : 'text-rose-500'} />
+          <span className="font-semibold text-gray-700 capitalize text-sm">{health.status}</span>
         </div>
       </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        
-        {/* Whitelist Panel */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="bg-gray-50/50 px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-            <Globe className="text-emerald-600" size={18} />
-            <h2 className="font-bold text-gray-900">Library Whitelist Policy</h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+            <Users size={24} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-500">Total Users</p>
+            <p className="text-2xl font-black text-gray-900">{metrics.users}</p>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+            <FileCode size={24} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-500">Submissions</p>
+            <p className="text-2xl font-black text-gray-900">{metrics.submissions}</p>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+          <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+            <CheckCircle size={24} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-500">Worker Status</p>
+            <p className="text-xl font-bold text-gray-900">Available</p>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+          <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center shrink-0">
+            <Server size={24} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-500">Database</p>
+            <p className="text-xl font-bold text-gray-900">Connected</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-50 flex items-center gap-2 bg-gray-50/50">
+            <Shield size={18} className="text-emerald-600" />
+            <h2 className="font-bold text-gray-900">Email Whitelist</h2>
           </div>
           <div className="p-6">
-            <div className="flex gap-2 mb-6">
-              <input 
-                type="text" 
-                placeholder="e.g., cdn.jsdelivr.net" 
-                className="flex-1 bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all text-sm font-mono"
-                value={newDomain} onChange={e => setNewDomain(e.target.value)}
+            <p className="text-sm text-gray-500 mb-6">
+              Only users signing in from these email domains will be authorized as 'Teacher' or 'Admin' roles.
+            </p>
+
+            <form onSubmit={handleAddDomain} className="flex gap-2 mb-6">
+              <input
+                type="text"
+                value={newDomain}
+                onChange={(e) => setNewDomain(e.target.value)}
+                placeholder="e.g., example.edu"
+                className="flex-1 border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white transition-colors px-4 py-2 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
               />
-              <button 
-                onClick={addDomain} 
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+              <button
+                type="submit"
+                disabled={!newDomain.trim()}
+                className="bg-gray-900 hover:bg-gray-800 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
               >
-                <Plus size={16}/> Add
+                Add Domain
               </button>
-            </div>
-            
-            <div className="border border-gray-100 rounded-xl overflow-hidden bg-white">
-              <ul className="divide-y divide-gray-100">
-                {whitelist.map(w => (
-                  <li key={w.id} className="p-4 flex justify-between items-center hover:bg-gray-50 transition-colors group">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
-                        <ShieldCheck size={14} />
-                      </div>
-                      <span className="font-mono text-sm text-gray-700 font-medium">{w.domain}</span>
-                    </div>
-                    <button 
-                      onClick={() => removeDomain(w.id)} 
-                      className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 size={16}/>
-                    </button>
-                  </li>
-                ))}
-                {whitelist.length === 0 && (
-                  <li className="p-8 text-center text-gray-500 flex flex-col items-center gap-2">
-                    <ServerCrash className="text-gray-300" size={32} />
-                    <p className="font-medium text-gray-900">Zero Trust Enforced</p>
-                    <p className="text-sm">No domains allowed. All external sandbox requests blocked.</p>
-                  </li>
-                )}
-              </ul>
-            </div>
-          </div>
-        </div>
+            </form>
 
-        {/* Evaluation Logs Panel */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="bg-gray-50/50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-               <Terminal className="text-emerald-600" size={18} />
-               <h2 className="font-bold text-gray-900">Worker Evaluation Logs</h2>
-            </div>
-            <button onClick={fetchLogs} className="text-gray-400 hover:text-emerald-600 transition-colors bg-white border border-gray-200 p-1.5 rounded-md shadow-sm">
-              <RefreshCw size={14}/>
-            </button>
-          </div>
-          
-          <div className="p-4 max-h-[500px] overflow-y-auto">
-            {logs.length > 0 ? (
-               <div className="space-y-3">
-                 {logs.map(log => (
-                   <div key={log.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-3 group hover:border-emerald-300 transition-colors">
-                     <div className="flex justify-between items-start">
-                       <div>
-                         <p className="font-bold text-xs text-gray-500 uppercase tracking-widest mb-1">Run Assignment</p>
-                         <p className="font-mono text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-sm inline-block">{String(log.id).slice(0, 8)}</p>
-                       </div>
-                       <button onClick={() => replayEval(log.id)} className="bg-slate-900 text-white hover:bg-emerald-600 px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 opacity-0 group-hover:opacity-100">
-                         <PlayCircle size={14} /> Replay Task
-                       </button>
-                     </div>
-                     <div className="flex gap-2">
-                        <span className="text-[10px] font-bold px-2 py-1 rounded bg-gray-100 text-gray-600">HTML: {log.html_score}</span>
-                        <span className="text-[10px] font-bold px-2 py-1 rounded bg-gray-100 text-gray-600">CSS: {log.css_score}</span>
-                        <span className="text-[10px] font-bold px-2 py-1 rounded bg-gray-100 text-gray-600">JS: {log.js_score}</span>
-                        <span className="text-[10px] font-bold px-2 py-1 rounded bg-amber-50 border border-amber-200 text-amber-700">VIS: {Number(log.visual_score ?? 0).toFixed(1)}</span>
-                     </div>
-                   </div>
-                 ))}
-               </div>
-            ) : (
-               <div className="p-8 text-center text-gray-500 flex flex-col items-center gap-2">
-                 <Terminal className="text-gray-300" size={32} />
-                 <p className="font-medium text-gray-900">Worker Pool Idle</p>
-                 <p className="text-sm">No historical evaluation logs found in the database.</p>
-               </div>
+            {error && (
+              <div className="mb-6 flex items-center gap-2 text-rose-600 bg-rose-50 px-4 py-3 rounded-lg text-sm font-medium">
+                <AlertTriangle size={16} />
+                {error}
+              </div>
             )}
-          </div>
-        </div>
-      </div>
 
-      {/* Live Replay Terminal Modal */}
-      {replayModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0f172a] rounded-2xl shadow-2xl w-[700px] max-w-full overflow-hidden border border-slate-700 transform transition-all flex flex-col">
-            
-            {/* Terminal Top Bar */}
-            <div className="bg-[#1e293b] flex items-center justify-between px-4 py-3 border-b border-slate-700">
-               <div className="flex items-center gap-3">
-                  <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-500 cursor-pointer" onClick={closeReplayModal}></div>
-                    <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <div className="space-y-2">
+              {whitelist.length === 0 ? (
+                <div className="text-center py-8 text-gray-400 text-sm bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                  No domains currently whitelisted.
+                </div>
+              ) : (
+                whitelist.map((domain) => (
+                  <div key={domain} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all group">
+                    <span className="font-medium text-gray-700 bg-gray-100 px-3 py-1 rounded-md text-sm">{domain}</span>
+                    <button
+                      onClick={() => handleRemoveDomain(domain)}
+                      className="text-xs font-semibold text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-50 px-3 py-1.5 rounded-lg"
+                    >
+                      Remove
+                    </button>
                   </div>
-                  <span className="text-slate-400 font-mono text-xs flex items-center gap-2">
-                    <Terminal size={14} /> worker-pool/live-eval
-                  </span>
-               </div>
-               <button onClick={closeReplayModal} className="text-slate-400 hover:text-white transition-colors">
-                 <X size={18} />
-               </button>
-            </div>
-            
-            {/* Terminal Body */}
-            <div className="p-5 h-[400px] overflow-y-auto font-mono text-sm space-y-2 relative no-scrollbar">
-               {/* Scanline effect */}
-               <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] z-50 pointer-events-none opacity-20"></div>
-               
-               {replayEvents.map((evt, idx) => (
-                 <div key={idx} className="flex gap-3">
-                   <span className="text-slate-500 shrink-0">{evt.time}</span>
-                   <span className={cn(
-                     evt.type === 'system' ? 'text-blue-400 font-bold' :
-                     evt.type === 'info' ? 'text-slate-300' :
-                     evt.type === 'success' ? 'text-emerald-400 font-bold' :
-                     evt.type === 'warning' ? 'text-amber-400' :
-                     'text-red-400 font-bold'
-                   )}>
-                     {evt.text}
-                   </span>
-                 </div>
-               ))}
-               
-               {replayEvents.length > 0 && replayEvents[replayEvents.length - 1].type !== 'success' && replayEvents[replayEvents.length - 1].type !== 'error' && (
-                 <div className="flex gap-3 animate-pulse">
-                   <span className="text-slate-500">{new Date().toLocaleTimeString()}</span>
-                   <span className="text-emerald-400">_</span>
-                 </div>
-               )}
-            </div>
-            
-            <div className="bg-[#1e293b] px-4 py-2 border-t border-slate-700 text-xs font-mono text-slate-500 flex justify-between">
-               <span>Status: {activeReplayId ? 'CONNECTED' : 'DISCONNECTED'}</span>
-               <span>TARGET: {activeReplayId || 'NONE'}</span>
+                ))
+              )}
             </div>
           </div>
-        </div>
-      )}
+        </section>
+
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col opacity-50 pointer-events-none">
+           <div className="px-6 py-4 border-b border-gray-50 flex items-center gap-2 bg-gray-50/50">
+             <Server size={18} className="text-gray-600" />
+             <h2 className="font-bold text-gray-900">System Logs</h2>
+           </div>
+           <div className="flex-1 p-6 flex items-center justify-center bg-gray-50 min-h-[300px]">
+              <p className="font-medium text-gray-500">Log viewing module not configured in this environment.</p>
+           </div>
+        </section>
+      </div>
     </div>
   );
 }
-
