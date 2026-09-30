@@ -1,42 +1,40 @@
 # Repository Health Report
 - **Strengths:** High backend test coverage overall, robust isolated worker testing environment. Monorepo architecture facilitates structured separation of concerns. Growing frontend testing maturity across UI and pages.
-- **Weaknesses:** Remaining edge-case UI component testing in `TrainerPanel.jsx` and `TeacherDashboard.jsx`. Test coverage in `components/ui/use-toast.jsx` is lacking.
-- **Risks:** Uncovered edge cases in dashboard components might lead to bad user experience during error scenarios.
-- **Opportunities:** Adding coverage for `TrainerPanel.jsx` and `TeacherDashboard.jsx` will push frontend coverage well above the 70% mark. Expanding testing for custom hooks (e.g. `use-toast`) will reduce potential state management bugs.
+- **Weaknesses:** Remaining edge-case UI component testing in `TrainerPanel.jsx` and `TeacherDashboard.jsx`. Test coverage in `components/ui/use-toast.jsx` is lacking. Some unhandled fallback logic in `backend/src/controllers/submissionController.js` was missing explicit coverage.
+- **Risks:** Uncovered edge cases in dashboard components might lead to bad user experience during error scenarios. Missing backend controller branch coverage could lead to undetected API failures on specific data structures.
+- **Opportunities:** Adding coverage for `TrainerPanel.jsx` and `TeacherDashboard.jsx` will push frontend coverage well above the 70% mark. Expanding testing for custom hooks (e.g. `use-toast`) will reduce potential state management bugs. Completing backend controller branch testing will bulletproof API endpoints.
 
 # Competitor Analysis
 - **Repositories analyzed:** LeetCode, HackerRank, CodeSignal.
 - **Advantages discovered:** Stable queue architectures with high concurrency thresholds and robust test coverage. High quality dashboard test suites ensuring accurate metric reporting.
-- **Gaps identified:** The frontend lacked extensive UI testing for handling user submissions and parsing the SSE message streams accurately compared to competing platforms.
-- **Opportunities to outperform:** Providing comprehensive tests that verify UI reactivity not only for successful queue interactions but for graceful degradation when worker connections drop.
+- **Gaps identified:** Our backend test suite missed a specific conditional branch in the submission controller concerning how visual artifacts are processed from the database versus the run JSON data.
+- **Opportunities to outperform:** Providing comprehensive tests that verify API response integrity for various states of internal entity relationships, guaranteeing stable payload formats for the frontend.
 
 # Priority Improvements
-1. **Highest impact:** Expand frontend test suite, particularly targeting core student-facing dashboard features in `StudentDashboard.test.jsx` and `Dashboard.test.jsx`.
-2. **Lowest complexity:** Use React Testing Library to simulate events and Vitest to mock out router navigation and SSE streams without mounting the actual backend API.
-3. **Strategic importance:** Ensuring robust test coverage for the frontend ensures a resilient application that catches regressions quickly.
+1. **Highest impact:** Expand backend test suite targeting branch coverage in `submissionController.js` related to the `Artifacts` relationship fallback.
+2. **Lowest complexity:** Use Jest mocks in `submissionController.test.js` to simulate database records with missing `visual_artifacts` arrays but present `Artifacts` relational data.
+3. **Strategic importance:** Ensuring robust test coverage for backend API controllers prevents data shape regressions when serving frontend requests.
 
 # Sprint Plan
-- **Sprint goal:** Improve frontend codebase reliability and quality by expanding unit test coverage for `StudentDashboard.jsx` and `Dashboard.jsx`.
+- **Sprint goal:** Improve backend codebase reliability and test coverage by handling the `Artifacts` array fallback edge-case in `submissionController.js`.
 - **Tasks:**
-  1. Add tests in `StudentDashboard.test.jsx` to simulate evaluation pipeline submission, check progress updates, handle stream closures, and ensure code resets.
-  2. Add tests in `Dashboard.test.jsx` to verify progress badge generation and zero-state component behavior.
-  3. Ensure that the test suite runs correctly across the workspace and improves aggregate coverage.
-- **Implementation roadmap:** Mock `EventSource` for checking message and error dispatches in `StudentDashboard`. Mock `useNavigate` to catch correct evaluation re-directions. Update mock fetch data in `Dashboard` to render different state boundaries.
-- **Expected outcomes:** `StudentDashboard.jsx` line coverage drastically increases. The overall test suite becomes more robust, verifying that frontend components handle errors gracefully.
+  1. Add tests in `submissionController.test.js` under `getSubmissionResult` block.
+  2. Mock `EvaluationRun.findOne` to return an empty `visual_artifacts` list but a populated `Artifacts` relational array.
+  3. Verify the controller correctly formats and maps the `Artifacts` array into the `visualTests` payload structure.
+  4. Ensure all backend tests run successfully and coverage increases.
+- **Implementation roadmap:** Mock specific relational Sequelize data in `submissionController.test.js` to trigger lines 335-355 in `submissionController.js`. Validate the `res.json` payload structure in the test expectations.
+- **Expected outcomes:** `submissionController.js` line and branch coverage improves. The backend API test suite provides stricter guarantees on payload shapes.
 
 # Technical Improvements
 - **Architecture:** N/A this cycle.
 - **Performance:** N/A this cycle.
 - **Scalability:** N/A this cycle.
 - **Security:** N/A this cycle.
-- **Testing:** Added extensive user event test cases within `StudentDashboard.test.jsx` for resetting code, starting submissions, observing SSE callbacks, and failing SSE streams. Expanded `Dashboard.test.jsx` with tests parsing progress badges and handling no-submission states.
+- **Testing:** Added mock test case in `submissionController.test.js` to cover the `Artifacts` table fallback logic when `visual_artifacts` JSON is empty on an `EvaluationRun`.
 - **Documentation:** Updated `output.md` with current cycle reflections.
-- **DevOps:** Enhanced the reliability of continuous integration checks for the frontend.
+- **DevOps:** Enhanced backend CI reliability by covering an edge case in submission API results.
 
 # Metrics Improved
-- 4 new test assertions added to `StudentDashboard.test.jsx`.
-- 2 new test assertions added to `Dashboard.test.jsx`.
-- `StudentDashboard.jsx` line coverage improved from 61.29% to 85.48%.
-- Total frontend tests increased from 32 to 36.
-- Overall frontend statement coverage increased from 58.05% to 61.96%.
-- Overall frontend line coverage increased from 63.43% to 67.59%.
+- 1 new test block and multiple test assertions added to `submissionController.test.js`.
+- `submissionController.js` line coverage improved slightly as the relational `Artifacts` mapping block was tested.
+- Total backend tests increased from 113 to 114.
