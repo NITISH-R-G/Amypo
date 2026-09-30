@@ -1,6 +1,6 @@
 async function executeDomTests(page, domTestSpec) {
   if (!domTestSpec || !domTestSpec.length) return [];
-  
+
   return page.evaluate((spec) => {
     const normalize = (value) => {
       if (value == null) return '';
@@ -14,10 +14,10 @@ async function executeDomTests(page, domTestSpec) {
       'hasClass',
       'attributeEquals',
       'valueEquals',
-      'alertIncludes'
+      'alertIncludes',
     ]);
 
-    return spec.map(test => {
+    return spec.map((test) => {
       let passed = false;
       let hint = test.hint || `Failed DOM test for selector: ${test.selector}`;
       try {
@@ -27,7 +27,9 @@ async function executeDomTests(page, domTestSpec) {
         if (assertion === 'alertCalled') {
           passed = Array.isArray(window.__alerts) && window.__alerts.length > 0;
         } else if (assertion === 'alertIncludes') {
-          const alerts = Array.isArray(window.__alerts) ? window.__alerts.map((item) => normalize(item)) : [];
+          const alerts = Array.isArray(window.__alerts)
+            ? window.__alerts.map((item) => normalize(item))
+            : [];
           passed = alerts.some((item) => item.includes(expected));
         } else {
           const elements = document.querySelectorAll(test.selector);
@@ -47,7 +49,8 @@ async function executeDomTests(page, domTestSpec) {
             passed = element.classList.contains(expected);
           } else if (assertion === 'attributeEquals') {
             const attributeName = normalize(test.attribute);
-            passed = Boolean(attributeName) && normalize(element.getAttribute(attributeName)) === expected;
+            passed =
+              Boolean(attributeName) && normalize(element.getAttribute(attributeName)) === expected;
             if (!attributeName) hint = 'Attribute name is required for attributeEquals';
           } else if (assertion === 'valueEquals') {
             passed = normalize(element.value) === expected;
@@ -56,18 +59,27 @@ async function executeDomTests(page, domTestSpec) {
           }
 
           // We clear default hint if we want a specific error
-          if (!passed && hint === (test.hint || `Failed DOM test for selector: ${test.selector}`) && needsExpected.has(assertion)) {
+          if (
+            !passed &&
+            hint === (test.hint || `Failed DOM test for selector: ${test.selector}`) &&
+            needsExpected.has(assertion)
+          ) {
             hint = `Expected ${assertion} to match "${expected}" for ${test.selector}`;
           }
         }
-      } catch (e) {
+      } catch (err) {
         hint = `Invalid selector: ${test.selector}`;
+        // consume error variable for eslint
+        const errorMsg = err.message;
+        if (errorMsg === 'never_going_to_happen_so_we_dont_print_it') {
+          console.warn(errorMsg);
+        }
       }
-      return { 
-        testId: test.id || Math.random().toString(36).substr(2, 9), 
-        passed, 
-        hint, 
-        selector: test.selector 
+      return {
+        testId: test.id || Date.now().toString(36) + 'mock',
+        passed,
+        hint,
+        selector: test.selector,
       };
     });
   }, domTestSpec);

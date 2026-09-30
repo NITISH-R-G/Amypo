@@ -12,7 +12,9 @@ async function executeInteractions(page, interactionSpec) {
 
   for (const step of interactionSpec) {
     try {
-      const action = String(step?.action || '').trim().toLowerCase();
+      const action = String(step?.action || '')
+        .trim()
+        .toLowerCase();
       const selector = typeof step?.selector === 'string' ? step.selector : '';
       const timeout = Number(step?.timeout) > 0 ? Number(step.timeout) : 2000;
 
@@ -32,7 +34,9 @@ async function executeInteractions(page, interactionSpec) {
           await page.click(selector, { clickCount: 3 });
           await page.keyboard.press('Backspace');
         }
-        await page.type(selector, valueToType, { delay: Number(step?.typingDelay) > 0 ? Number(step.typingDelay) : 10 });
+        await page.type(selector, valueToType, {
+          delay: Number(step?.typingDelay) > 0 ? Number(step.typingDelay) : 10,
+        });
       } else if (action === 'scroll') {
         await page.evaluate((s) => {
           const el = document.querySelector(s);
@@ -43,7 +47,9 @@ async function executeInteractions(page, interactionSpec) {
       } else if (action === 'focus') {
         await page.focus(selector);
       } else if (action === 'select') {
-        const values = Array.isArray(step?.value) ? step.value.map((item) => String(item)) : [String(step?.value || '')];
+        const values = Array.isArray(step?.value)
+          ? step.value.map((item) => String(item))
+          : [String(step?.value || '')];
         await page.select(selector, ...values);
       } else if (action === 'check') {
         await page.check(selector);
@@ -54,7 +60,7 @@ async function executeInteractions(page, interactionSpec) {
       } else if (action === 'waitforselector') {
         await page.waitForSelector(selector, {
           visible: Boolean(step?.waitForVisible),
-          timeout
+          timeout,
         });
       } else {
         console.warn(`Unsupported interaction action: ${action}`);
@@ -64,8 +70,8 @@ async function executeInteractions(page, interactionSpec) {
       if (step?.waitForNavigation) {
         try {
           await page.waitForNavigation({ waitUntil: 'networkidle0', timeout });
-        } catch (_) {
-          // Some interactions do not navigate; ignore quietly.
+        } catch (err) {
+          console.warn('Navigation wait timed out', err.message);
         }
       }
 

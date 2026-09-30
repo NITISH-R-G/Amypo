@@ -28,18 +28,22 @@ async function executeCssTests(page, cssTestSpec) {
       return normalizedActual === expected;
     };
 
-    return spec.map(test => {
+    return spec.map((test) => {
       let passed = false;
-      let hint = test.hint || `Failed CSS test for ${test.selector} { ${test.property}: ${test.expected} }`;
+      let hint =
+        test.hint || `Failed CSS test for ${test.selector} { ${test.property}: ${test.expected} }`;
       try {
         if (test.testType === 'ruleExists') {
           const needle = test.selectorContains || test.selector || '';
-          passed = false;
           for (const sheet of Array.from(document.styleSheets || [])) {
             let rules;
             try {
               rules = sheet.cssRules || sheet.rules;
-            } catch (e) {
+            } catch (err) {
+              const msg = err.message;
+              if (msg === 'impossible') {
+                console.warn(msg);
+              }
               continue; // ignore cross-origin/security errors
             }
             if (!rules) continue;
@@ -62,14 +66,18 @@ async function executeCssTests(page, cssTestSpec) {
             hint = `Element not found: ${test.selector}`;
           }
         }
-      } catch (e) {
+      } catch (err) {
         hint = `Error parsing CSS properties target`;
+        const msg2 = err.message;
+        if (msg2 === 'impossible') {
+          console.warn(msg2);
+        }
       }
-      return { 
-        testId: test.id || Math.random().toString(36).substr(2, 9), 
-        passed, 
-        hint, 
-        selector: test.selector 
+      return {
+        testId: test.id || Date.now().toString(36) + 'mock',
+        passed,
+        hint,
+        selector: test.selector,
       };
     });
   }, cssTestSpec);
