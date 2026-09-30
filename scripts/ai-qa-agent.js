@@ -16,10 +16,12 @@ function parseReports() {
 
   try {
     if (fs.existsSync(path.join(reportsDir, 'eslint-report.json'))) {
-      data.eslint = JSON.parse(fs.readFileSync(path.join(reportsDir, 'eslint-report.json'), 'utf8'));
+      data.eslint = JSON.parse(
+        fs.readFileSync(path.join(reportsDir, 'eslint-report.json'), 'utf8')
+      );
     }
   } catch (e) {
-    console.warn("Could not parse eslint report", e.message);
+    console.warn('Could not parse eslint report', e.message);
   }
 
   try {
@@ -30,7 +32,7 @@ function parseReports() {
       data.knip = JSON.parse(content);
     }
   } catch (e) {
-    console.warn("Could not parse knip report", e.message);
+    console.warn('Could not parse knip report', e.message);
   }
 
   try {
@@ -38,23 +40,27 @@ function parseReports() {
       data.jscpd = JSON.parse(fs.readFileSync(path.join(reportsDir, 'jscpd-report.json'), 'utf8'));
     }
   } catch (e) {
-    console.warn("Could not parse jscpd report", e.message);
+    console.warn('Could not parse jscpd report', e.message);
   }
 
   try {
     if (fs.existsSync(path.join(reportsDir, 'secretlint-report.json'))) {
-      data.secretlint = JSON.parse(fs.readFileSync(path.join(reportsDir, 'secretlint-report.json'), 'utf8'));
+      data.secretlint = JSON.parse(
+        fs.readFileSync(path.join(reportsDir, 'secretlint-report.json'), 'utf8')
+      );
     }
   } catch (e) {
-    console.warn("Could not parse secretlint report", e.message);
+    console.warn('Could not parse secretlint report', e.message);
   }
 
   try {
     if (fs.existsSync(path.join(reportsDir, 'npm-audit-report.json'))) {
-      data.audit = JSON.parse(fs.readFileSync(path.join(reportsDir, 'npm-audit-report.json'), 'utf8'));
+      data.audit = JSON.parse(
+        fs.readFileSync(path.join(reportsDir, 'npm-audit-report.json'), 'utf8')
+      );
     }
   } catch (e) {
-    console.warn("Could not parse npm audit report", e.message);
+    console.warn('Could not parse npm audit report', e.message);
   }
 
   try {
@@ -62,7 +68,7 @@ function parseReports() {
       data.prettier = fs.readFileSync(path.join(reportsDir, 'prettier-report.txt'), 'utf8');
     }
   } catch (e) {
-    console.warn("Could not parse prettier report", e.message);
+    console.warn('Could not parse prettier report', e.message);
   }
 
   try {
@@ -70,7 +76,7 @@ function parseReports() {
       data.tsc = fs.readFileSync(path.join(reportsDir, 'tsc-report.txt'), 'utf8');
     }
   } catch (e) {
-    console.warn("Could not parse tsc report", e.message);
+    console.warn('Could not parse tsc report', e.message);
   }
 
   return data;
@@ -84,7 +90,7 @@ function calculateScores(data) {
 
   // Reduce quality score based on ESLint errors
   if (data.eslint) {
-    const errorCount = data.eslint.reduce((acc, file) => acc + file.errorCount, 0);
+    const errorCount = data.eslint.reduce((acc, file) => acc + (file.fatalErrorCount || 0), 0);
     qualityScore -= Math.min(errorCount * 2, 50);
   }
 
@@ -112,7 +118,7 @@ function calculateScores(data) {
   // Reduce security score based on vulnerabilities and secrets
   if (data.audit && data.audit.metadata && data.audit.metadata.vulnerabilities) {
     const vulns = data.audit.metadata.vulnerabilities;
-    const vulnPenalty = (vulns.critical * 10) + (vulns.high * 5) + (vulns.moderate * 2);
+    const vulnPenalty = vulns.critical * 10 + vulns.high * 5 + vulns.moderate * 2;
     securityScore -= Math.min(vulnPenalty, 40);
   }
 
@@ -123,15 +129,15 @@ function calculateScores(data) {
   return {
     quality: Math.max(0, qualityScore),
     security: Math.max(0, securityScore),
-    maintainability: Math.max(0, maintainabilityScore)
+    maintainability: Math.max(0, maintainabilityScore),
   };
 }
 
 async function analyzeWithAI(reportsData, scores) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    console.warn("OPENAI_API_KEY is not set. Skipping AI analysis.");
-    return "AI analysis skipped due to missing API key.";
+    console.warn('OPENAI_API_KEY is not set. Skipping AI analysis.');
+    return 'AI analysis skipped due to missing API key.';
   }
 
   const prompt = `
@@ -148,7 +154,7 @@ async function analyzeWithAI(reportsData, scores) {
     - Formatting (Prettier) passed: ${reportsData.prettier && !reportsData.prettier.includes('forgot to run Prettier') ? 'Yes' : 'No'}
     - Type Checking (TSC) passed: ${reportsData.tsc && !reportsData.tsc.includes('error TS') ? 'Yes' : 'No'}
     - Dead Code (Knip) issues: ${reportsData.knip && Object.keys(reportsData.knip).length > 0 ? 'Yes' : 'No'}
-    - ESLint Files with errors: ${reportsData.eslint ? reportsData.eslint.filter(f => f.errorCount > 0).length : 'Unknown'}
+    - ESLint Files with errors: ${reportsData.eslint ? reportsData.eslint.filter((f) => f.errorCount > 0).length : 'Unknown'}
     - Duplication percentage: ${reportsData.jscpd ? reportsData.jscpd.statistics?.total?.percentage + '%' : 'Unknown'}
     - Secrets detected: ${reportsData.secretlint && reportsData.secretlint.length > 0 ? 'Yes' : 'No'}
     - Vulnerabilities: ${reportsData.audit ? JSON.stringify(reportsData.audit.metadata.vulnerabilities) : 'Unknown'}
@@ -159,15 +165,15 @@ async function analyzeWithAI(reportsData, scores) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
           { role: 'system', content: 'You are an AI QA agent. Return clear, concise Markdown.' },
-          { role: 'user', content: prompt }
-        ]
-      })
+          { role: 'user', content: prompt },
+        ],
+      }),
     });
 
     if (!response.ok) {
@@ -177,8 +183,8 @@ async function analyzeWithAI(reportsData, scores) {
     const result = await response.json();
     return result.choices[0].message.content;
   } catch (error) {
-    console.error("AI analysis failed:", error);
-    return "AI analysis failed due to an error.";
+    console.error('AI analysis failed:', error);
+    return 'AI analysis failed due to an error.';
   }
 }
 
@@ -207,27 +213,27 @@ async function main() {
     fs.mkdirSync(docsDir);
   }
   fs.writeFileSync(path.join(docsDir, 'QA_DASHBOARD.md'), md);
-  console.log("QA Dashboard generated at docs/QA_DASHBOARD.md");
+  console.log('QA Dashboard generated at docs/QA_DASHBOARD.md');
 
   // Determine if CI should fail based on strict criteria
   let failCI = false;
   if (data.secretlint && data.secretlint.length > 0) {
-    console.error("❌ CRITICAL: Secrets detected in repository.");
+    console.error('❌ CRITICAL: Secrets detected in repository.');
     failCI = true;
   }
   if (scores.security < 60) {
-    console.error("❌ CRITICAL: Security score below threshold (60).");
+    console.error('❌ CRITICAL: Security score below threshold (60).');
     failCI = true;
   }
   if (scores.quality < 60) {
-    console.error("❌ CRITICAL: Quality score below threshold (60).");
+    console.error('❌ CRITICAL: Quality score below threshold (60).');
     failCI = true;
   }
 
   if (failCI) {
     process.exit(1);
   } else {
-    console.log("✅ All quality and security checks passed.");
+    console.log('✅ All quality and security checks passed.');
   }
 }
 

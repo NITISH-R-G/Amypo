@@ -34,12 +34,12 @@ async function executeCssTests(page, cssTestSpec) {
       try {
         if (test.testType === 'ruleExists') {
           const needle = test.selectorContains || test.selector || '';
-          passed = false;
           for (const sheet of Array.from(document.styleSheets || [])) {
             let rules;
             try {
               rules = sheet.cssRules || sheet.rules;
-            } catch (e) {
+            } catch (_err) {
+              console.warn("Ignored CSS rules error:", _err.message);
               continue; // ignore cross-origin/security errors
             }
             if (!rules) continue;
@@ -62,11 +62,11 @@ async function executeCssTests(page, cssTestSpec) {
             hint = `Element not found: ${test.selector}`;
           }
         }
-      } catch (e) {
+      } catch (_err) {
         hint = `Error parsing CSS properties target`;
       }
       return { 
-        testId: test.id || Math.random().toString(36).substr(2, 9), 
+        testId: test.id || crypto.randomUUID(),
         passed, 
         hint, 
         selector: test.selector 
