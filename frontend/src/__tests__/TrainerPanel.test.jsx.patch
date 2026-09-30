@@ -1,0 +1,11 @@
+--- frontend/src/__tests__/TrainerPanel.test.jsx
++++ frontend/src/__tests__/TrainerPanel.test.jsx
+@@ -60,7 +60,7 @@
+     const addQuestionBtn = await screen.findByRole('button', { name: /Add Question/i });
+     await user.click(addQuestionBtn);
+
+-    expect(await screen.findByDisplayValue('')).toBeInTheDocument();
++    expect(await screen.findByPlaceholderText('e.g. Build a Pricing Card')).toBeInTheDocument();
+   });
+
+   it('renders trainer panel, fetches questions, and saves draft', async () => {

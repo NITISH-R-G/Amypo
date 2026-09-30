@@ -146,11 +146,4 @@ function Toaster() {
   )
 }
 
-export function dispatchForTest(action) {
-  // eslint-disable-next-line no-undef
-  if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') {
-    dispatch(action);
-  }
-}
-
 export { useToast, toast, Toaster }
