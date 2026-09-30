@@ -1,9 +1,9 @@
-import js from '@eslint/js';
-import globals from 'globals';
-import sonarjs from 'eslint-plugin-sonarjs';
-import security from 'eslint-plugin-security';
+const js = require('@eslint/js');
+const globals = require('globals');
+const sonarjs = require('eslint-plugin-sonarjs');
+const security = require('eslint-plugin-security');
 
-export default [
+module.exports = [
   js.configs.recommended,
   sonarjs.configs.recommended,
   security.configs.recommended,
@@ -20,7 +20,7 @@ export default [
     files: ['**/*.js', '**/*.jsx'],
     languageOptions: {
       ecmaVersion: 2022,
-      sourceType: 'module',
+      sourceType: 'commonjs',
       globals: {
         ...globals.node,
         ...globals.browser,

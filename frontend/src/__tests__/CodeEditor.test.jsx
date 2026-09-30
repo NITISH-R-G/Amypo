@@ -19,6 +19,9 @@ vi.mock('@monaco-editor/react', () => {
         const editorMock = {
           addCommand: vi.fn((key, callback) => {
              // Mock addCommand so we can theoretically cover it
+             if (callback) {
+                 callback();
+             }
           }),
           getAction: vi.fn().mockReturnValue({ run: vi.fn() })
         };
