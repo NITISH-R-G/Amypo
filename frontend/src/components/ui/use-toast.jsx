@@ -22,6 +22,12 @@ const toastListeners = new Set()
 
 let memoryState = { toasts: [] }
 
+export function dispatchForTest(action) {
+  if (process.env.NODE_ENV === 'test') {
+    dispatch(action);
+  }
+}
+
 function dispatch(action) {
   memoryState = reducer(memoryState, action)
   toastListeners.forEach((listener) => {
