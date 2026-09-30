@@ -60,4 +60,57 @@ describe('TrainerPanel', () => {
       }));
     });
   });
+
+  it('adds and updates DOM assertions and interaction steps', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    // Verify UI buttons for assertions and interactions are rendered
+    const addAssertionBtn = await screen.findByRole('button', { name: /Add Assertion/i });
+    expect(addAssertionBtn).toBeInTheDocument();
+
+    await user.click(addAssertionBtn);
+
+    // Switch to Content Builder tab (which shows Spec Builder)
+    const contentBuilderBtn = await screen.findByText(/Content Builder/i);
+    await user.click(contentBuilderBtn);
+
+    // Wait for the assertion block to appear. It defaults to 'exists' assertion, which has a Target Selector input.
+    // Wait for the label to appear
+    await waitFor(() => {
+      const labels = screen.getAllByText(/Target Selector/i);
+      expect(labels.length).toBeGreaterThan(0);
+    });
+    const targetLabels = screen.getAllByText(/Target Selector/i);
+    const selectorInput = targetLabels[0].nextElementSibling;
+    expect(selectorInput).toBeInTheDocument();
+
+    // Type into the selector input
+    // The simulated user input might fail if it's not a proper HTML element. We can use fireEvent.change.
+    fireEvent.change(selectorInput, { target: { value: '.my-element' } });
+    expect(selectorInput).toHaveValue('.my-element');
+
+    // Also add an interaction step
+    const addInteractionBtn = await screen.findByRole('button', { name: /Add Step/i });
+    await user.click(addInteractionBtn);
+
+    // There might be multiple Selector inputs now (one 'Target Selector' for assertion, one 'Selector' for interaction if default needs it)
+    // The first interaction defaults to 'click' which requires a selector.
+    // The label for the interaction step is 'Selector'. Let's look for exactly that using text match.
+    const interactionSelectorLabels = await screen.findAllByText(/^Selector$/i);
+
+    // Find the input associated with the 'Selector' label
+    const interactionLabel = interactionSelectorLabels.find(el => el.tagName.toLowerCase() === 'label');
+    if (interactionLabel) {
+      const interactionInput = interactionLabel.nextElementSibling;
+      if (interactionInput && interactionInput.tagName.toLowerCase() === 'input') {
+        fireEvent.change(interactionInput, { target: { value: '#btn-submit' } });
+        expect(interactionInput).toHaveValue('#btn-submit');
+      }
+    }
+  });
 });
