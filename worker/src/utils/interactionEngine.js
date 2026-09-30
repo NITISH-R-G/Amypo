@@ -64,7 +64,9 @@ async function executeInteractions(page, interactionSpec) {
       if (step?.waitForNavigation) {
         try {
           await page.waitForNavigation({ waitUntil: 'networkidle0', timeout });
-        } catch (_) {
+        } catch (err) {
+          console.warn("Navigation wait ignored", err.message);
+        }
           // Some interactions do not navigate; ignore quietly.
         }
       }

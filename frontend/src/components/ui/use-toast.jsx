@@ -119,6 +119,7 @@ function useToast() {
     ...state,
     toast,
     dismiss: (toastId) => dispatch({ type: "DISMISS_TOAST", toastId }),
+    remove: (toastId) => dispatch({ type: "REMOVE_TOAST", toastId }),
   }
 }
 
