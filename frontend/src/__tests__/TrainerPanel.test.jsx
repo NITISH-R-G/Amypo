@@ -4,6 +4,11 @@ import userEvent from '@testing-library/user-event';
 import TrainerPanel from '../pages/TrainerPanel';
 import { BrowserRouter } from 'react-router-dom';
 
+vi.mock('react-chartjs-2', () => ({
+  Bar: () => null,
+  Doughnut: () => null
+}));
+
 describe('TrainerPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -60,4 +65,39 @@ describe('TrainerPanel', () => {
       }));
     });
   });
+
+  it('handles generating a baseline', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    const generateBaselineButton = await screen.findByRole('button', { name: /Generate Baseline/i });
+    expect(generateBaselineButton).toBeInTheDocument();
+
+    // Attempting to generate a baseline triggers an API call that we must intercept
+    global.fetch.mockImplementationOnce((url, options) => {
+      if (url.includes('/api/questions/1/baseline') && options.method === 'POST') {
+        return Promise.resolve({
+           ok: true,
+           json: () => Promise.resolve({ success: true, message: 'Queued' })
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({})
+      });
+    });
+
+    await user.click(generateBaselineButton);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions/1/baseline', expect.objectContaining({
+        method: 'POST'
+      }));
+    });
+  });
+
 });
