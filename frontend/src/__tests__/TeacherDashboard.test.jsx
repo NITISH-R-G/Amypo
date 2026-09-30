@@ -3,6 +3,17 @@ import { render, screen, waitFor } from '@testing-library/react';
 import TeacherDashboard from '../pages/TeacherDashboard';
 import { BrowserRouter } from 'react-router-dom';
 
+import userEvent from '@testing-library/user-event';
+
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 describe('TeacherDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -43,5 +54,22 @@ describe('TeacherDashboard', () => {
     expect(screen.getByText('Modern Frontend Fundamentals Question 1')).toBeInTheDocument();
     expect(screen.getByText(/1 Questions/)).toBeInTheDocument();
     expect(screen.getByText(/1 Students Enrolled/)).toBeInTheDocument();
+  });
+
+  it('navigates to settings and creates a new question', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/questions');
+    });
+
+    const settingsBtn = screen.getByRole('button', { name: /Course settings/i });
+    await user.click(settingsBtn);
+    expect(mockNavigate).toHaveBeenCalledWith('/settings');
+
+    const addModuleBtn = screen.getByTitle('Create a new question');
+    await user.click(addModuleBtn);
+    expect(mockNavigate).toHaveBeenCalledWith('/teacher/editor');
   });
 });
