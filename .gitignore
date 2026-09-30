@@ -10,3 +10,6 @@ cypress/screenshots/
 artifacts/
 .gemini/
 .agents/
+
+reports/
+coverage/
