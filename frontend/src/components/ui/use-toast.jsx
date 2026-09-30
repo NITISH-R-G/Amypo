@@ -146,4 +146,4 @@ function Toaster() {
   )
 }
 
-export { useToast, toast, Toaster }
+export { useToast, toast, Toaster, dispatch }
