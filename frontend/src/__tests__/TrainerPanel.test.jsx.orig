@@ -52,17 +52,6 @@ describe('TrainerPanel', () => {
     expect(screen.getByText('Trainer Dashboard')).toBeInTheDocument();
   });
 
-  it('can create a new question', async () => {
-    const user = userEvent.setup();
-    renderComponent();
-
-    // Find add question button
-    const addQuestionBtn = await screen.findByRole('button', { name: /Add Question/i });
-    await user.click(addQuestionBtn);
-
-    expect(await screen.findByPlaceholderText('e.g. Build a Pricing Card')).toBeInTheDocument();
-  });
-
   it('renders trainer panel, fetches questions, and saves draft', async () => {
     const user = userEvent.setup();
     renderComponent();

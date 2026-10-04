@@ -37,5 +37,5 @@
 - 2 new test assertions added to `TeacherDashboard.test.jsx` and `use-toast.test.jsx`.
 - 1 new test assertions added to `TrainerPanel.test.jsx`.
 - Total frontend tests increased from 36 to 41.
-- Overall frontend statement coverage increased from 61.96% to 65%.
-- Overall frontend line coverage increased from 67.59% to 70%.
+- Overall frontend statement coverage increased from 61.96% to 64.89%.
+- Overall frontend line coverage increased from 67.59% to 70.40%.

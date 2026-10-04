@@ -1,0 +1,14 @@
+--- frontend/src/__tests__/TeacherDashboard.test.jsx
++++ frontend/src/__tests__/TeacherDashboard.test.jsx
+@@ -4,6 +4,11 @@
+ import TeacherDashboard from '../pages/TeacherDashboard';
+ import { BrowserRouter } from 'react-router-dom';
+
++vi.mock('react-chartjs-2', () => ({
++  Bar: () => null,
++  Doughnut: () => null
++}));
++
+ describe('TeacherDashboard', () => {
+   beforeEach(() => {
+     vi.clearAllMocks();
