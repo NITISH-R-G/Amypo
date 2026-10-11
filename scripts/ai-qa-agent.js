@@ -84,7 +84,7 @@ function calculateScores(data) {
 
   // Reduce quality score based on ESLint errors
   if (data.eslint) {
-    const errorCount = data.eslint.reduce((acc, file) => acc + file.errorCount, 0);
+    const errorCount = data.eslint.reduce((acc, file) => acc + (file.fatalErrorCount || 0), 0);
     qualityScore -= Math.min(errorCount * 2, 50);
   }
 
@@ -116,7 +116,7 @@ function calculateScores(data) {
     securityScore -= Math.min(vulnPenalty, 40);
   }
 
-  if (data.secretlint && data.secretlint.length > 0) {
+  if (data.secretlint && data.secretlint.some(file => file.messages && file.messages.length > 0)) {
     securityScore -= 50; // Heavy penalty for secrets
   }
 
@@ -148,9 +148,9 @@ async function analyzeWithAI(reportsData, scores) {
     - Formatting (Prettier) passed: ${reportsData.prettier && !reportsData.prettier.includes('forgot to run Prettier') ? 'Yes' : 'No'}
     - Type Checking (TSC) passed: ${reportsData.tsc && !reportsData.tsc.includes('error TS') ? 'Yes' : 'No'}
     - Dead Code (Knip) issues: ${reportsData.knip && Object.keys(reportsData.knip).length > 0 ? 'Yes' : 'No'}
-    - ESLint Files with errors: ${reportsData.eslint ? reportsData.eslint.filter(f => f.errorCount > 0).length : 'Unknown'}
+    - ESLint Files with errors: ${reportsData.eslint ? reportsData.eslint.filter(f => (f.fatalErrorCount || 0) > 0).length : 'Unknown'}
     - Duplication percentage: ${reportsData.jscpd ? reportsData.jscpd.statistics?.total?.percentage + '%' : 'Unknown'}
-    - Secrets detected: ${reportsData.secretlint && reportsData.secretlint.length > 0 ? 'Yes' : 'No'}
+    - Secrets detected: ${reportsData.secretlint && reportsData.secretlint.some(f => f.messages && f.messages.length > 0) ? 'Yes' : 'No'}
     - Vulnerabilities: ${reportsData.audit ? JSON.stringify(reportsData.audit.metadata.vulnerabilities) : 'Unknown'}
   `;
 
@@ -211,7 +211,7 @@ async function main() {
 
   // Determine if CI should fail based on strict criteria
   let failCI = false;
-  if (data.secretlint && data.secretlint.length > 0) {
+  if (data.secretlint && data.secretlint.some(f => f.messages && f.messages.length > 0)) {
     console.error("❌ CRITICAL: Secrets detected in repository.");
     failCI = true;
   }
