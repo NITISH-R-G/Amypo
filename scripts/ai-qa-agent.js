@@ -84,7 +84,7 @@ function calculateScores(data) {
 
   // Reduce quality score based on ESLint errors
   if (data.eslint) {
-    const errorCount = data.eslint.reduce((acc, file) => acc + file.errorCount, 0);
+    const errorCount = data.eslint.reduce((acc, file) => acc + file.fatalErrorCount, 0);
     qualityScore -= Math.min(errorCount * 2, 50);
   }
 
