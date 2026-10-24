@@ -105,6 +105,12 @@ function toast({ ...props }) {
   }
 }
 
+export function dispatchForTest(action) {
+  if (process.env.NODE_ENV === 'test') {
+    dispatch(action)
+  }
+}
+
 function useToast() {
   const [state, setState] = React.useState(memoryState)
 
