@@ -29,6 +29,12 @@ function dispatch(action) {
   })
 }
 
+export function dispatchForTest(action) {
+  if (process.env.NODE_ENV === "test") {
+    dispatch(action)
+  }
+}
+
 function reducer(state, action) {
   switch (action.type) {
     case "ADD_TOAST":
@@ -92,6 +98,7 @@ function toast({ ...props }) {
       ...props,
       id,
       open: true,
+      update,
       onOpenChange: (open) => {
         if (!open) dismiss()
       },
@@ -127,7 +134,7 @@ function Toaster() {
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
+      {toasts.map(function ({ id, title, description, action, update, ...props }) {
         return (
           <Toast key={id} {...props}>
             <div className="grid gap-1">
